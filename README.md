@@ -11,5 +11,5 @@
 #         react.js) encodeURIComponent(String) 이용하여 인코딩
 #         java spring boot) @RequestParam 로 받고
 #                           URLDecoder.decode()로 디코딩
-#                           ObjectMapper 생성하여
+#                           ObjectMapper 생성하여 JSON 파싱
 #                           파라미터 호환 클래스로 Mapping
