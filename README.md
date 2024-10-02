@@ -1,5 +1,5 @@
 # sapa_board
-
+#
 # 2024-10-02
 # All Page
 #      1. 블랙 라벨, 화이트 라벨 처리
@@ -64,7 +64,7 @@
 #       1) .vscode/settings.json에 "terminal.integrated.defaultProfile.windows": "WSL" 추가
 #       2) .vscode/tasks.json 생성
 #       3) script파일로 작성하기로 함. extension 폐기.
-
+#
 # SSH 설정
 #    1. SSH 설치 확인
 #       ssh -V
