@@ -1,12 +1,32 @@
 # [sapa_board]
 
-# {2024-09-30}
+# {2024-10-02}
 # (All Page)
 #      1. 블랙 라벨, 화이트 라벨 처리
-#
+#      
+# 개발 서버 자동 배포 스크립트 작성
+#      1. Linux(centOS) 명령어 express
+#          - sudo lsof -i :8085
+#          - sudo kill [PID]
+#          - sudo netstat -tuln | grep 3000
+#          - sudo systemctl start mariadb
+#          - sudo systemctl status mariadb
+#          - sudo 
+#      2. ssh 배포 자동화 목표 리스트
+#          - FE) 루트폴더의 frontend 에서 react build 있으면 삭제
+#          - 루트폴더의 frontend 에서 react build
+#          - WEB-INF 폴더 cp
+#          - 루트폴더의 frontend의 새로운 build 폴더이름을 ROOT 폴더로 변경 
+#          - tomcat ROOT 뒤에 오늘 날짜 붙이고 before 폴더로 mv 
+#          - ROOT cp
+#          - bin/shutdown.sh
+#          - bin/startup.sh
+#          - BE) 루트폴더의 backend 에서 packaging
+#          - audit-0.0.1-SNAPSHOT.jar cp
+#          - java -jar 실행
 #
 # {2024-09-27}
-
+#
 # (Form Page)
 #      2. 첨부파일 첨부 후 treeSelect 하면 관리항목 누락.
 #         - Request Header 초기화
