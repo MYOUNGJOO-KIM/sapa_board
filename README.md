@@ -1,11 +1,29 @@
 # sapa_board
 #
+# 2024-10-14
+#      1. catalina.out 지정 위치에 로그 생성 혹은 로그 레벨 올리기 -> startup.sh 수정해야해서 보류
+#      2. 블랙 라벨, 화이트 라벨 처리
+#      3. 조회 조건 '작업자명' 추가
+#      4. 증빙자료 관리 조회 추가
+#      5. 증빙자료 관리 수정 추가
+#      6. 증빙자료 관리 삭제 추가
+#      
+#
+# 2024-10-11
+#      1. 누락된 첨부파일 찾아 놓기 -> print_yn flag
+#      2. 톰캣 로그 지정 폴더 안 만들어지는 거 확인
+#      3. 성능 최적화: 동시에 접속하는 사용자를 고려하는 것이 중요함. 서버와 데이터베이스의 성능을 체크하고, 필요하다면 캐싱 전략이나 로드 밸런싱을 도입하는 것 고려해야 함.
+#      4. 보안: 사용자 데이터를 안전하게 보호하기 위한 보안 조치를 마련해야 함. HTTPS 사용, 입력 데이터 검증, 사용자 인증 등을 고려해야 해야 함.
+#      5. 모니터링: 배포 후에는 사용자 활동과 시스템 성능을 모니터링할 수 있는 도구를 설정해야 함. 문제가 발생했을 때 빠르게 대응할 수 있도록 하는 것이 중요함.
+#      6. 증빙자료 출력 n일 때에는 버튼 누를 때 제외하고 가도록 처리
+#      NOTE: Picked up JDK_JAVA_OPTIONS:  --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.io=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.util.concurrent=ALL-UNNAMED --add-opens=java.rmi/sun.rmi.transport=ALL-UNNAMED
+C:\Windows\System32\OpenSSH\scp.exe: stat local "222": No such file or directory
+#
 # 2024-10-10
 #      1. 증빙자료 출력 > 15개 가져오는 거 10개로 변경
 #      2. 증빙자료 출력 > 선택 출력일 때 모두 출력 파라미터 해제
 #      3. ssh 포트 정의, 라우터 포트 포워딩 22 -> 222 
 #      4. 미리보기 view 추가
-#      5. 누락된 첨부파일 찾아 놓기
 #
 # 2024-10-04
 # 
