@@ -2,6 +2,18 @@
 #
 # 2024-10-15
 #      1. 공용 IP 접근 불가 문제 해결
+#         - ssh 접근도 불가하여 Connection timed out 로그
+#         - systemctl restart sshd 해봐도 같은 현상이 일어남
+#         - 서버 로그 확인을 위해 /etc/ssh/sshd_config 에서 loglevel을 (Default) INFO에서 DEBUG로 변경
+#         - LINUX centOS /var/log의 secure을 grep sshd
+#         - 오류 관련 내용은 보이지 않아, systemctl restart sshd
+#         - ssh 접속이 가능해지고, 기존에 확인 불가능했던 공용 웹페이지도 확인 가능.
+#         - 해결된 이유는 아직 찾지 못하여 시스템 리소스 관리가 미흡했다고 판단
+#         - 메모리(RAM) 관리 : free -h 로 불필요한 프로세스를 확인 및 종료하거나 메모리를 많이 사용하느나 어플리케이션은 종료 시키기
+#         - CPU 사용량 확인 : top 또는 htop 현재 CPU 사용량을 모니터링하여 많이 사용하는 프로세스를 확인 및 종료
+#         - 디스크 공간 확인 : df -h 디스크 사용량 확인 및 불필요한 파일이나 로그 파일을 삭제
+#         - 프로세스 관리 : ps aux 현재 실행 중인 프로세스를 확인하고, 필요 없는 프로세스를 확인 및 종료
+#         - 
 #
 # 2024-10-14
 #      1. catalina.out 지정 위치에 로그 생성 혹은 로그 레벨 올리기 -> startup.sh 수정해야해서 보류
