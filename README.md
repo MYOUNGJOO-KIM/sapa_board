@@ -15,6 +15,8 @@
 #           주기적으로 저장해두는 작업, 백업 방법 및 백업 주기 등의 
 #           백업 정책을 결정하고 백업 데이터를 별도의 저장장치에 관리하는 작업
 #         - https://www.itworld.co.kr/news/223099 참고
+#         - ssh -L 3307:localhost:3306 user@remote_host -N &
+mysqldump -h 127.0.0.1 -P 3307 -u username -p database_name > backup.sql
 #      2. 업무 현황 보고서 업데이트
 #      3. 고객 의견 넣는 관리 홈페이지 필요
 #
