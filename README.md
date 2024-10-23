@@ -1,4 +1,13 @@
 # sapa_board
+
+# 2024-10-23
+#      1. 리눅스에서 tomcat 권한
+#         - bin 하위 폴더나 프로그램들은 실행하는 스크립트들이 많으므로, 거의 다 권한이 소유자로 박혀 있음.
+#             root로 접속해서 ACL을 통한 권한 추가해주면 쉽게 해결. setfacl -R -m u:사용자:rx apache-tomcat-10.0.6/
+#         - 톰캣 로그를 작성하는 catarina 쪽의 권한은 읽기, 실행, 작성 이 필요함.
+#             ACL을 통한 권한 추가 : setfacl -m u:사용자명:rwx /opt/apache-tomcat-10.0.6/logs
+#      2. mariaDB 운영 DB 버전으로 변경
+#         - mariaDB 11.4 삭제 
 #
 # 2024-10-22
 #      1. DB 자동 백업 스크립트 필요
