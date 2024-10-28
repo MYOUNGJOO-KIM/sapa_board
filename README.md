@@ -3,7 +3,9 @@
 # 2024-10-28
 #      1. Last failed login: Mon Oct 28 08:22:09 KST 2024 from 000.00.000.00 on ssh:notty
 There were 1657 failed login attempts since the last successful login.
-#         - 보안 강화 필요 : fail2ban 로 로그인 실패 반복하는 IP를 차
+#         - 보안 강화 필요 : fail2ban 로 로그인 실패 반복하는 IP를 차단
+#         - fail2ban-client status
+#         - sudo fail2ban-client status sshd | grep 'Banned IP list'
 # 2024-10-25
 #      1. 카테고리 테이블 정리 도중, upCatCd의 중복 확인이 필요함을 확인(삭제된 카테고리 값들 대혼란)
 #      2. 변리사 선핸문헌 확인
