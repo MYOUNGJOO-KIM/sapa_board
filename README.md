@@ -1,5 +1,12 @@
 # sapa_board
 
+# 2024-10-30
+#      1. 유저 테스트 진행중(실시간 로그 확인 및 대응)
+#      2. 개발서버 root 폴더 폴더링
+#      3. 서버 자동 재시작 
+#      4. 코드 최적화
+#      5. 문의 대응 게시판 화면 정의
+#      
 # 2024-10-28
 #      1. Last failed login: Mon Oct 28 08:22:09 KST 2024 from 000.00.000.00 on ssh:notty
 There were 1657 failed login attempts since the last successful login.
