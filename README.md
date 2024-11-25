@@ -1,5 +1,12 @@
 # sapa_board
 #
+# 2024-11-25
+#      1. Java Spring boot RuntimeException 등 예외 발생 시, 기본적으로 HTTP 응답으로는 500 Internal Server Error 상태 코드만 반환되고, 예외 메시지는 응답 본문에 포함되지 않도록 설정되어 있음에 따른 undefined 표시.(요청or리액션 타임 언발란스 X)
+#      2. 우선은 server.error.include-message=always 설정으로 예외 메세지도 응답 본문에 포함시키도록 함.
+#      3. 추후 GlobalExceptionHandler 로 핸들링 할 것임.
+#
+# 2024-11-14 ~ 2024-11-22 준공일 대비 외근
+#
 # 2024-11-13
 #      1. 개발서버 root 폴더 폴더링
 #      2. 유저 테스트 수정사항 반영
