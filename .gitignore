@@ -4,6 +4,7 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 !**/src/main/**/resources/
+**/application.properties
 
 ### STS ###
 .apt_generated
@@ -32,5 +33,7 @@ build/
 
 ### VS Code ###
 .vscode/
+.history/
+.mvn/
 
 *.tmp
