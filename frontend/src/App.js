@@ -6,12 +6,12 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { CategoryProvider } from './CategoryContexts';
 
 
-import Container from './audit/Container';
-import MgtContainer from './audit/MgtContainer';
-import FormContainer from './audit/FormContainer';
-import DtAttachContainer from './audit/DtAttachContainer';
-import PreviewPopUp from './audit/PreviewPopUp';
-import Dashboard from './audit/Dashboard';
+import Container from './sapa/Container';
+import MgtContainer from './sapa/MgtContainer';
+import FormContainer from './audisapat/FormContainer';
+import DtAttachContainer from './sapa/DtAttachContainer';
+import PreviewPopUp from './sapa/PreviewPopUp';
+import Dashboard from './sapa/Dashboard';
 
 import styled from 'styled-components';//공용 스타일 컴포넌트
 

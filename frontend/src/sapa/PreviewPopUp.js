@@ -1,6 +1,6 @@
 import React, {useEffect, useState} from 'react';
 import BoardList from '../board/BoardList';
-import SearchBox from "./../board/SearchBox";
+import SearchBox from "../board/SearchBox";
 import icon_x_white from './../assets/images/icon_x_white.svg';
 import { CategoryContext, useCategoryContext } from '../CategoryContexts';
 import axios from 'axios';
