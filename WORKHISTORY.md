@@ -1,5 +1,12 @@
 # sapa_board
 #
+# 2024-12-06
+#      1. tree update 수정
+#      2. inputSet, clear 전체적으로 form에 맞추기
+#      3. category RUD시 rowclick이 있었을 때 초기화 단위를 rowclick 전단계로 변경
+#      4. 개발컴, 로컬 비공개 형상관리 툴 생성
+#      5. 문의쪽 DB 설계 시작
+#
 # 2024-12-04
 #      1. 운영 반영 시 od 컬럼 추가
 #      2. 트리에다가 od 추가에서 문제 생김.
