@@ -4,8 +4,9 @@
 #      1. tree update 수정
 #      2. inputSet, clear 전체적으로 form에 맞추기
 #      3. category RUD시 rowclick이 있었을 때 초기화 단위를 rowclick 전단계로 변경
-#      4. 개발컴, 로컬 비공개 형상관리 툴 생성
+#      4. 개발컴, 로컬 중앙집중형 형상 관리 시스템 형상관리 툴 생성
 #      5. 문의쪽 DB 설계 시작
+#      6. centOS 7 root, 사용자 비밀번호 변경
 #
 # 2024-12-04
 #      1. 운영 반영 시 od 컬럼 추가
