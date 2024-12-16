@@ -1,5 +1,10 @@
 # sapa_board
 #
+# 2024-12-16
+#      1. react status 분리
+#
+# 2024-12-09 ~ 2024-12-13 준공
+#
 # 2024-12-09
 #      1. tree update 수정
 #      2. inputSet, clear 전체적으로 form에 맞추기
