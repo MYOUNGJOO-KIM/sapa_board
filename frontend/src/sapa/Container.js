@@ -64,10 +64,11 @@ function Container( properties ){
     let response;
     try {
       if (!properties.loadYn){properties.setLoadYn(true);}
-      response = await axios.post(`${apiBaseUrl}/category/getTree`, {
-        mgtYn:treeMgtYn, printYn:treePrintYn
-      });
-      setCategoryListTreeList(response.data);
+      response = await axios.post(`${apiBaseUrl}/category/getTree`, {mgtYn:treeMgtYn, printYn:treePrintYn});
+      if(response.data.length > 0){
+        setCategoryListTreeList(response.data);
+        setIsTreeOpen(true);
+      }
     } catch (error) {
       response = error;
     } finally {
@@ -77,15 +78,16 @@ function Container( properties ){
   }
 
   useEffect(() => {
-    if(isTreeOpen){
-      inputClear();
-      getCategoryListTreeList();
-      getChildCategoryList();
-      getParentCategoryList();
-    }
-  },[]);
+    getCategoryListTreeList();  // 첫 렌더링 시에 getCategoryListTreeList 호출
+  }, []);
 
-  if (!isTreeOpen) return null;
+  useEffect(() => {
+    if (isTreeOpen) {
+      requestHeader.page=1;requestHeader.size=10;
+      getChildCategoryList(requestHeader, {});
+      getParentCategoryList({},{}); // category 리스트를 가져오고 상태를 업데이트
+    }
+  }, [isTreeOpen]);
 
   const formState = {
     state : formStateStr, 
@@ -99,20 +101,10 @@ function Container( properties ){
   };
   
   const requestHeader = {
-    page: 1
-    , size: 10
-    , searchKey : selectSearchKey
-    , searchStr : inputSearchStr
-  };
-
-  const requestBody = {
-    catSeq : catSeq
-    , catNm : inputCatNm
-    , catCd : inputCatCd
-    , upCatCd : inputUpCatCd
-    , upCatNm : inputUpCatNm
-    , printYn : inputPrintYn
-    , mgtYn : inputMgtYn
+    page: ''//1
+    , size: ''//10
+    , searchKey : ''//inputSearchKey
+    , searchStr : ''//inputSearchStr
   };
 
   const selectOptions = [
@@ -120,103 +112,44 @@ function Container( properties ){
     , {key : 'catCd', value : '카테고리 코드'}
   ];
 
-  const getChildCategoryList = async (newRequestHeader, newRequestBody) => {
-
-
-    if (formState.rowSelected.rowClickCatSeq > 0) {//로우 클릭 중
-      switch(formState.state){
-        case 'i' : 
-          requestBody.catSeq = formState.treeSelected.selectedInfo.node.catSeq;
-          requestBody.catCd = formState.treeSelected.selectedKeys[0];
-        break;
-        case 'u' : 
-          // 카테고리 수정상태일 시 search 하려면 지금은 모두 insert로 바꾸고 실행하게 해놓음
-          
-        break;
-      }
-
-    } else if (formState.treeSelected.selectedKeys.length > 0) {//트리 클릭 중
-      if( formState.treeSelected.selectedInfo.node ){//아니 node없다고 오류남
-        switch(formState.state){
-          case 'i' : 
-            requestBody.catSeq = formState.treeSelected.selectedInfo.node.catSeq;
-            requestBody.catCd = formState.treeSelected.selectedKeys[0];
-            
-            //여기부턴 insert시 하위리스트 조회일 때를 가정
-            requestBody.upCatCd = '';
-            requestBody.upCatNm = '';
-            requestBody.mgtYn = '';
-            requestBody.printYn = '';
-          break;
-          case 'u' :
-            requestBody.catSeq = formState.treeSelected.selectedInfo.node.catSeq;
-            requestBody.catCd = formState.treeSelected.selectedKeys[0];
-            
-          break;
-        }
-        
-      } else {
-
-        requestBody.catSeq = selectedInfo.node.catSeq;
-        requestBody.catCd = selectedKeys[0];
-      }
-    } else {//로우 클릭X, 트리 클릭X
-      requestBody.catSeq = '';
-      requestBody.catCd = '';
-      requestBody.upCatCd = '';
-      requestBody.upCatNm = '';
-      requestBody.mgtYn = '';
-      requestBody.printYn = '';
-    }
-
-    if(newRequestHeader){
-      //requestHeader.id = newRequestHeader.id ? newRequestHeader.id : requestHeader.id;
-      //requestBody.catSeq = newRequestBody.catSeq ? newRequestBody.catSeq : requestBody.catSeq;
-      requestHeader.searchKey = newRequestHeader.searchKey ? newRequestHeader.searchKey : requestHeader.searchKey;
-      requestHeader.searchStr = newRequestHeader.searchStr ? newRequestHeader.searchStr : requestHeader.searchStr;
-      requestHeader.page = newRequestHeader.page ? newRequestHeader.page : requestHeader.page;
-      requestHeader.size = newRequestHeader.size ? newRequestHeader.size : requestHeader.size;
-
-      if (formState.treeSelected.selectedKeys.length == 0) {//선택된 트리 값이 없을 때
-        requestBody.catSeq = '';
-        requestBody.catNm = '';
-        requestBody.catCd = '';
-        requestBody.upCatCd = '';
-        requestBody.upCatNm = '';
-        requestBody.printYn = '';
-        requestBody.mgtYn = '';
-
-      }
-    }
+  const getChildCategoryList = async (requestHeader, requestBody) => {
+    console.log("몇번 실행되냐 3");
 
     let rqHeader = cleanParam(requestHeader);
     let rqBody = cleanParam(requestBody);
 
-    if(newRequestBody){//신규추가, 수정 이 두 상태가 한 state에 있어야 하는 관계로, 임시 처리
-      rqBody = cleanParam(newRequestBody);
-    }
+    // if(requestBody){//신규추가, 수정 이 두 상태가 한 state에 있어야 하는 관계로, 임시 처리
+    //   rqBody = cleanParam(requestBody);
+    // }
     
     let response;
 
     try {
       if (!properties.loadYn){properties.setLoadYn(true);}
+      reactJsPgClear();
       response = await axios.post(`${apiBaseUrl}/category/getChildCategoryList`, rqBody, {params:rqHeader});
-      
+
       let totalCnt = 0;
 
       if(response.data != null && response.data != ''){
         totalCnt = response.data[0].totalCnt;
+        //responseRef.current = response;
+        setChildCategoryList(response.data);
+        reactJsPgSet({totalCnt:totalCnt, show:true});
         
         //setTriggerUpdate(prev => !prev);
-        setReactJsPgShow(true);
+        //setReactJsPgShow(true);
+        // if(reactJsPgRef.current){
+        //   reactJsPgRef.current.updateListSize(totalCnt);
+        // }
       } 
-      setReactJsPgListSize(totalCnt);
+      // setReactJsPgListSize(totalCnt);
         
-      if(reactJsPgRef.current){
-        reactJsPgRef.current.updateListSize(totalCnt);
-      }
+      // if(reactJsPgRef.current){
+      //   reactJsPgRef.current.updateListSize(totalCnt);
+      // }
 
-      setChildCategoryList(response.data);
+      // setChildCategoryList(response.data);
       
     } catch (error) {
       response = error;
@@ -226,20 +159,17 @@ function Container( properties ){
     }
   };
 
-  const getParentCategoryList = async () => {//초기화 이후엔 CUD 시 수정된 항목 반영
+  const getParentCategoryList = async (requestHeader, requestBody) => {//초기화 이후엔 CUD 시 수정된 항목 반영
 
     let response;
 
     try {
       if (!properties.loadYn){properties.setLoadYn(true);}
-      response = await axios.post(`${apiBaseUrl}/category/getParentCategoryList`, {}, {});
+      response = await axios.post(`${apiBaseUrl}/category/getParentCategoryList`, requestHeader, requestBody);
       
       if(response.data != null && response.data != ''){
         
-
         response.data.forEach(function(category) {
-          console.log(category.key);
-          console.log(category.value);
           category.value = "---".repeat(category.level)+' '+category.value;
         });
         response.data.unshift({key : '', value : '선택 없음'});
@@ -254,27 +184,8 @@ function Container( properties ){
     }
   };
 
-  const saveCategory = async ( ) => {
-    
+  const saveCategory = async (requestHeader, requestBody) => {
     if(validation(requestBody)){
-      if (formState.rowSelected.rowClickCatSeq > 0) {//로우 클릭 중
-        
-        console.log('트리 클릭 상태');
-      } else if (formState.treeSelected.selectedKeys.length > 0) {//트리 클릭 중
-        if( formState.treeSelected.selectedInfo.node ){//아니 node없다고 오류남
-          switch(formState.state){
-            case 'i' : 
-            break;
-            case 'u' :
-            break;
-          }
-          
-        } else {
-          requestBody.catSeq = selectedInfo.node.catSeq;
-          requestBody.catCd = selectedKeys[0];
-        }
-      }
-
       requestBody.chgId = userId;//테스트 때문에
 
       const rqHeader = cleanParam(requestHeader);
@@ -299,14 +210,18 @@ function Container( properties ){
         delete requestBody.chgId;
         delete rqBody.chgId;
 
-        onCancelClick();
+        //onCancelBtnClick(false);
+        cancel(false);
+        getCategoryListTreeList();
+        getParentCategoryList({},{});
+        
         properties.setLoadYn(false);
         return response;
       }
     }
   };
 
-  const deleteCategory = async ( ) => {
+  const deleteCategory = async (requestHeader, requestBody) => {
     if(validation(requestBody)){
       requestBody.chgId = userId;//테스트 때문에
       const rqHeader = cleanParam(requestHeader);
@@ -324,7 +239,11 @@ function Container( properties ){
         delete requestBody.chgId;
         delete rqBody.chgId;
 
-        onCancelClick();
+        cancel(false);
+        //onCancelBtnClick(false);
+        getCategoryListTreeList();
+        getParentCategoryList({},{});
+
         properties.setLoadYn(false);
         return response;
       }
@@ -332,137 +251,234 @@ function Container( properties ){
   };
 
   const stateClear = function (){
-    
-    setFormStateStr('i');
-    formState.state = 'i';
-
+    setCatSeq('');
+    setOd('');
     setSelectedKeys([]);
     setSelectedInfo(null);
-    formState.treeSelected.selectedKeys = '';
-    formState.treeSelected.selectedInfo = '';
-
     setRowClickCatCd('');
     setRowClickCatSeq('');
-    formState.rowSelected.rowClickCatSeq = '';
-    formState.rowSelected.rowClickCatCd = '';
-
-    setCatSeq('');
-
+    setShowCancelBtn(false);
     setShowDelBtn(false);
     setShowEditBtn(false);
     setShowEditCancelBtn(false);
-
-    setReactJsPgListSize(0);
-    setReactJsPgShow(false);
-
     setChildCategoryList([]);
   }
 
-  const inputClear = function(){
+  const stateSet = (state) => {
+    if (state.catSeq || state.catSeq == '') {
+       setCatSeq(state.catSeq);
+     }
+    if (state.od || state.od == '') {
+      setOd(state.od);
+    }
+    if (state.selectedKeys || state.selectedKeys == '') {
+      setSelectedKeys(state.selectedKeys);
+    }
+    if (state.selectedInfo || state.selectedInfo == '') {
+      setSelectedInfo(state.selectedInfo);
+    }
+    if (state.rowClickCatCd || state.rowClickCatCd == '') { 
+      setRowClickCatCd(state.rowClickCatCd);
+    }
+    if (state.rowClickCatSeq || state.rowClickCatSeq == '') {
+      setRowClickCatSeq(state.rowClickCatSeq);
+    }
+  }
 
-    setCatSeq('');
+  // useEffect(() => {
+  //   if (isStateSetUpCntUpdated.current) {
+  //     // 상태 업데이트가 완료된 후에만 실행
+  //     setTimeout(() => {
+  //       getChildCategoryList();
+  //       isStateSetUpCntUpdated.current = false;  // 다시 플래그를 초기화
+  //     }, 0);  // setTimeout을 사용하여 상태 업데이트 후 실행되도록 처리
+  //   }
+  // }, [stateSetUpCnt]);
+
+  const inputClear = function(){
     setInputCatNm('');
     setInputCatCd('');
     setInputUpCatCd('');
     setInputUpCatNm('');
     setInputPrintYn('y');
     setInputMgtYn('y');
-    requestBody.catSeq = '';
-    requestBody.catNm = '';
-    requestBody.catCd = '';
-    requestBody.upCatCd = '';
-    requestBody.upCatNm = '';
-    requestBody.printYn = '';
-    requestBody.mgtYn = '';
   }
 
   const inputSet = function (category){
-    switch(formState.state){
-      
-      case 'i' :
-        if (category.catCd || category.catCd == '') {
-          setInputUpCatCd(category.catCd);
-          requestBody.upCatCd = category.catCd;
-        }
-    
-        if (category.catNm) {
-          setInputUpCatNm(category.catNm);
-          requestBody.upCatNm = category.catNm;
-        }
-
-        
-      break;
-      case 'u' : 
-      //위에 i 에서 수정한 upCatCd, nm을 진짜놈으로 바꿔야함. 위에선 자기자신을 칭함.
-        if (category.catSeq) {
-          setCatSeq(category.catSeq);
-          requestBody.catSeq = category.catSeq;
-        }
-        if (category.catNm) {
-          setInputCatNm(category.catNm);
-          requestBody.catNm = category.catNm;
-        }
-    
-        if (category.catCd) {
-          setInputCatCd(category.catCd);
-          requestBody.catCd = category.catCd;
-        }
-    
-        if (category.upCatCd || category.upCatCd == '') {
-          setInputUpCatCd(category.upCatCd);
-          requestBody.upCatCd = category.upCatCd;
-        }
-    
-        if (category.upCatNm) {
-          setInputUpCatNm(category.upCatNm);
-          requestBody.upCatNm = category.upCatNm;
-        }
-    
-        if (category.printYn) {
-          setInputPrintYn(category.printYn);
-          requestBody.printYn = category.printYn;
-        }
-        
-        if (category.mgtYn) {
-          setInputMgtYn(category.mgtYn);
-          requestBody.mgtYn = category.mgtYn;
-        }
-      break;
-      default : 
-
-      break;
+    if (category.catCd) {
+      setInputCatCd(category.catCd);
+    }
+    if (category.catNm) {
+      setInputCatNm(category.catNm);
+    }
+    if (category.upCatCd || category.upCatCd == '') {
+      setInputUpCatCd(category.upCatCd);
+    }
+    if (category.upCatNm) {
+      setInputUpCatNm(category.upCatNm);
+    }
+    if (category.printYn) {
+      setInputPrintYn(category.printYn);
+    }
+    if (category.mgtYn) {
+      setInputMgtYn(category.mgtYn);
     }
   }
 
+  const reactJsPgClear = function (state) {
+    setReactJsPgListSize(0);
+    setReactJsPgShow(false);
+    reactJsPgRef.current.updateListSize(0);
+    reactJsPgRef.current.updateActivePage();
+  }
+
+  const reactJsPgSet = function (state) {
+    setReactJsPgListSize(state.totalCnt);
+    setReactJsPgShow(true);
+    reactJsPgRef.current.updateListSize(state.totalCnt);
+  }
+
+  
+
   const search = function(e){
+    //reactJsPgClear();
 
-    setSelectSearchKey(selectSearchKey); 
-    setInputSearchStr(inputSearchStr); 
-    requestHeader.searchKey = selectSearchKey;
-    requestHeader.searchStr = inputSearchStr;
+    // setSelectSearchKey(selectSearchKey); 
+    // setInputSearchStr(inputSearchStr); 
 
-    //페이지네이션 초기화
-    if(reactJsPgRef.current){
-      reactJsPgRef.current.updateActivePage();
-    }
 
-    getChildCategoryList();
+    // requestHeader.searchKey = selectSearchKey;
+    // requestHeader.searchStr = inputSearchStr;
+    // if(reactJsPgRef.current){
+    //   reactJsPgRef.current.updateActivePage();
+    // }
+    getChildCategoryList({...requestHeader, searchKey : selectSearchKey, searchStr : inputSearchStr},{});
+  }
+
+  const onClickSearchBtn = function(e){
+    //reactJsPgClear();
+    search();
   }
 
   const searchReset = function(e){
-
+    //reactJsPgClear();
     setSelectSearchKey(''); 
     setInputSearchStr(''); 
-    requestHeader.searchKey = '';
-    requestHeader.searchStr = '';
+    // requestHeader.searchKey = '';
+    // requestHeader.searchStr = '';
+    // if(reactJsPgRef.current){
+    //   reactJsPgRef.current.updateActivePage();
+    // }
+  }
 
-    //페이지네이션 초기화
-    if(reactJsPgRef.current){
-      reactJsPgRef.current.updateActivePage();
+  const onClickSearchResetBtn = function(e){
+    searchReset();
+    getChildCategoryList();
+  }
+
+  const cancel = function (isRow) {
+    if(!isRow){
+      stateClear();
+    }
+    searchReset();
+    inputClear();
+  }
+
+  const onCancelBtnClick = function (isRow) {//맹 수정중
+    cancel(isRow);
+    //reactJsPgClear();
+    getChildCategoryList({},{});
+
+    setShowCancelBtn(false);
+    setShowEditBtn(false);
+    setShowEditCancelBtn(false);
+    setShowDelBtn(false);
+  }
+
+  const onEditClick = function(){
+    //u 상태
+    cancel(true);
+    let uParam = {};
+    let stateSetParam = {};
+    const requestHeader = {
+      page: 1
+      , size: 10
+      , searchKey : ''//inputSearchKey
+      , searchStr : ''//inputSearchStr
+    };
+    uParam = {
+      catSeq : selectedInfo.node.catSeq     //사용
+      , catNm : selectedInfo.node.title    //사용
+      , catCd : selectedKeys[0]    //사용
+      , upCatCd : selectedInfo.node.upCatCd  //사용
+      , upCatNm : selectedInfo.node.upCatNm  //사용
+      , printYn : selectedInfo.node.printYn  //사용
+      , mgtYn : selectedInfo.node.mgtYn    //사용
+      , od : selectedInfo.node.od       //사용
+    }
+    stateSetParam = {...uParam, selectedKeys : selectedKeys, selectedInfo : selectedInfo};
+
+    inputSet(uParam);
+
+    setShowCancelBtn(true);
+    setShowEditBtn(false);
+    setShowEditCancelBtn(true);
+    setShowDelBtn(true);
+  }
+
+  const editCancel = function(){
+    searchReset();
+    inputClear();
+  }
+
+  const onEditCancelClick = function(){
+    
+    editCancel();
+    let iParam = {};
+    let stateSetParam = {};
+
+    if(selectedKeys.length > 0){
+      iParam = {
+        upCatCd : selectedInfo.node.key  //사용
+        , upCatNm : selectedInfo.node.title  //사용
+        , printYn : selectedInfo.node.printYn  //사용
+        , mgtYn : selectedInfo.node.mgtYn    //사용
+      }
+      setShowCancelBtn(true);
+      setShowEditBtn(true);
+      setShowEditCancelBtn(false);
+      setShowDelBtn(false);
+    } else {
+      iParam = {
+        upCatCd : ''
+        , upCatNm : ''
+        , printYn : 'y'
+        , mgtYn : 'y'
+      }
+      setShowCancelBtn(false);
+      setShowEditBtn(false);
+      setShowEditCancelBtn(false);
+      setShowDelBtn(false);
     }
 
-    getChildCategoryList();
+    stateSetParam = {rowClickCatCd : '', rowClickCatSeq : ''};
+    stateSet(stateSetParam);
+    inputSet({...iParam, ...stateSetParam});
+  }
 
+  const inputSearchStrOnKeyUp = function(e){
+    if(e.key == 'Enter'){
+      //reactJsPgClear();
+      search();
+    }
+  }
+
+  const onSelectChange = function(e){
+    if(e.target.value == null){
+      setInputUpCatCd('');
+    } else{ 
+      setInputUpCatCd(e.target.value);
+    }
   }
 
   const validation = function (data) {
@@ -479,142 +495,117 @@ function Container( properties ){
     return true;
   }
 
-  const onTreeSelect = (selectedKeys, info, d,e,f) => {
-
-    //init
-    stateClear();
-    inputClear();
-    
+  const onTreeSelect = (selectedKeys, selectedInfo, d,e,f) => {
+    //i 상태
+    //onCancelBtnClick(false);
+    cancel(false);
+    let iParam = {};
+    let uParam = {};
+    let stateSetParam = {};
+    const requestHeader = {
+      page: 1
+      , size: 10
+      , searchKey : ''//inputSearchKey
+      , searchStr : ''//inputSearchStr
+    };
     if(selectedKeys.length > 0){
-
-      setSelectedKeys(selectedKeys);
-      setSelectedInfo(info);
-      formState.treeSelected.selectedKeys = selectedKeys;
-      formState.treeSelected.selectedInfo = info;
-
-      let category = {
-        catSeq : info.node.catSeq
-        , catCd : selectedKeys[0]
-        , catNm : info.node.title
-        , upCatCd : info.node.upCatCd == null ? '' : info.node.upCatCd
-        , upCatNm : info.node.upCatNm ? info.node.upCatNm : ''
-        , printYn : info.node.printYn//하위 리스트 조회문때매 주석한듯 수정중
-        , mgtYn : info.node.mgtYn//하위 리스트 조회문때매 주석한듯 수정중
+      iParam = {
+        upCatCd : selectedKeys[0]
+        , upCatNm : selectedInfo.node.title
+        , printYn : selectedInfo.node.printYn
+        , mgtYn : selectedInfo.node.mgtYn
       }
-      inputSet(category);
+      uParam = {
+        catSeq : selectedInfo.node.catSeq     //사용
+        , catNm : selectedInfo.node.title    //사용
+        , catCd : selectedKeys[0]    //사용
+        , upCatCd : selectedInfo.node.upCatCd  //사용
+        , upCatNm : selectedInfo.node.upCatNm  //사용
+        // , printYn : selectedInfo.node.printYn  //사용 //조회 이거 영향받음
+        // , mgtYn : selectedInfo.node.mgtYn    //사용 //조회 이거 영향받음
+        , od : selectedInfo.node.od       //사용
+      }
+      stateSetParam = {...uParam, selectedKeys : selectedKeys, selectedInfo : selectedInfo};
+      stateSet(stateSetParam);
+      inputSet(iParam);
 
+      getChildCategoryList(requestHeader, uParam);
+
+      setShowCancelBtn(true);
       setShowEditBtn(true);
       setShowEditCancelBtn(false);
       setShowDelBtn(false);
-    } 
+    } else {
+      getChildCategoryList(requestHeader, {});
 
-    searchReset();
-    
+      setShowCancelBtn(false);
+      setShowEditBtn(false);
+      setShowEditCancelBtn(false);
+      setShowDelBtn(false);
+    }
+
   };
 
   const onRowClick = function(selectedObj){
-
-    //init
-    inputClear();
-
-    setSelectSearchKey(''); 
-    setInputSearchStr(''); 
-    requestHeader.searchKey = '';
-    requestHeader.searchStr = '';
-
-    setRowClickCatSeq('');
-    setRowClickCatCd('');
-    formState.rowSelected.rowClickCatSeq = '';
-    formState.rowSelected.rowClickCatCd = '';
+    //u 상태
+    editCancel();
+    let iParam = {};
+    let stateSetParam = {};
+    const requestHeader = {
+      page: 1
+      , size: 10
+      , searchKey : ''//inputSearchKey
+      , searchStr : ''//inputSearchStr
+    };
 
     //공통
-    if (rowClickCatSeq == selectedObj.catSeq) {
-        
-      onEditCancelClick();
-
-    } else {
-      setFormStateStr('u');
-      formState.state = 'u';
-      setRowClickCatSeq(selectedObj.catSeq);
-      setRowClickCatCd(selectedObj.catCd);
-      formState.rowSelected.rowClickCatSeq = selectedObj.catSeq;
-      formState.rowSelected.rowClickCatCd = selectedObj.catCd;
-      inputSet(selectedObj);
-      setShowDelBtn(true);
+    if (rowClickCatSeq != selectedObj.catSeq) {
+      
+      stateSetParam = {rowClickCatCd : selectedObj.catCd, rowClickCatSeq : selectedObj.catSeq};
+      
+      setShowCancelBtn(true);
       setShowEditBtn(false);
       setShowEditCancelBtn(true);
+      setShowDelBtn(true);
+
+      stateSet(stateSetParam);
+      inputSet(selectedObj);
+    } else {
+
+      if(selectedKeys.length > 0){
+        iParam = {
+          upCatCd : selectedKeys[0]
+          , upCatNm : selectedInfo.node.title
+          , printYn : selectedInfo.node.printYn
+          , mgtYn : selectedInfo.node.mgtYn
+        }
+        setShowCancelBtn(true);
+        setShowEditBtn(true);
+        setShowEditCancelBtn(false);
+        setShowDelBtn(false);
+      } else {
+        iParam = {
+          upCatCd : ''
+          , upCatNm : ''
+          , printYn : 'y'
+          , mgtYn : 'y'
+        }
+        setShowCancelBtn(false);
+        setShowEditBtn(false);
+        setShowEditCancelBtn(false);
+        setShowDelBtn(false);
+      }
+      
+      stateSetParam = {rowClickCatCd : '', rowClickCatSeq : ''};
+      
+      stateSet(stateSetParam);
+      inputSet({...iParam, ...stateSetParam});
     }
   }
 
-  const inputSearchStrOnKeyUp = function(e){
-
-    if(e.key == 'Enter'){
-
-      search();//위에꺼 대체 가능
-
-    }
-  }
   
-  const onCancelClick = function () {
-
-    stateClear();//treeSelect에서 취소누를시 실행
-    inputClear();//treeSelect에서 취소누를시 실행
-    
-    getCategoryListTreeList();
-    getParentCategoryList();
-    
-    searchReset();
-  }
-
-  const onEditClick = function(){
-
-    setFormStateStr('u');
-    formState.state = 'u';
-
-    let category = {
-      catSeq : selectedInfo.node.catSeq
-      , catCd : selectedKeys[0]
-      , catNm : selectedInfo.node.title
-      , upCatCd : selectedInfo.node.upCatCd == null ? '' : selectedInfo.node.upCatCd
-      , upCatNm : selectedInfo.node.upCatNm
-      , printYn : selectedInfo.node.printYn
-      , mgtYn : selectedInfo.node.mgtYn
-    }
-
-    inputSet(category);
-    setShowDelBtn(true);
-    setShowEditBtn(false);
-    setShowEditCancelBtn(true);
-  }
-
-  const onEditCancelClick = function(){
-
-    setFormStateStr('i');//treeSelect에서 수정 취소누를시
-    formState.state = 'i';//treeSelect에서 수정 취소누를시
-
-    setRowClickCatCd('');
-    setRowClickCatSeq('');
-    formState.rowSelected.rowClickCatSeq = '';
-    formState.rowSelected.rowClickCatCd = '';
-    
-    setCatSeq('');
-    
-    setShowDelBtn(false);
-    setShowEditBtn(true);
-    setShowEditCancelBtn(false);
-    
-    inputClear();
-    inputSet({catCd : selectedKeys ? selectedKeys[0] : '', catNm : selectedInfo ? selectedInfo.node.title : ''});
-    
-  }
-
-  const onSelectChange = function(e){
-    if(e.target.value == null){
-      setInputUpCatCd('');
-    } else{ 
-      setInputUpCatCd(e.target.value);
-    }
-  }
+  
+  
 
   return ( 
     <div className='root_box admin'>
@@ -623,45 +614,45 @@ function Container( properties ){
         <div className='contents_box'>
           <div className='content_box category_box'>
             <div className='content_header'>트리뷰</div>
-            <CategoryListTree onClick={onTreeSelect} selectedKeys={selectedKeys} mgtYn={treeMgtYn} treeData={categoryListTreeList}/>
+            <CategoryListTree onClick={onTreeSelect} selectedKeys={selectedKeys} mgtYn={treeMgtYn} treeData={categoryListTreeList} setCategoryListTreeList={setCategoryListTreeList} categoryListTreeUpdateList={categoryListTreeUpdateList} setCategoryListTreeUpdateList = {setCategoryListTreeUpdateList}/>
           </div>
           <div className='dnm_content'>
             <div className='content_box cat_in'>
-                <div className='content_header'>카테고리 신규 생성
-                    <div className='button_box'>
-                        <BoardButton type="cancel" color="white" onClick={onCancelClick}/>
-                        <BoardButton type="cancel_put" color="white" show={showEditCancelBtn} onClick={onEditCancelClick}/>
-                        <BoardButton type="put" color="white" show={showEditBtn} onClick={onEditClick}/>
-                        <BoardButton type="save" color="orange" onClick={saveCategory}/>
-                        <BoardButton type="delete" color="white" show={showDelBtn} onClick={deleteCategory}/>
-                    </div>
-                </div>
-                <div className='input_container_box'>
-                    <Input type = 'hidden' value={catSeq} onChange={(event)=>{setCatSeq(event.target.value);} } />
-                    <Input type = 'text' value={inputCatNm} onChange={(event)=>{setInputCatNm(event.target.value);}} label_str = '카테고리명' placeholder_str='카테고리명을 입력하세요.'/>
-                    <Input type = 'text' value={inputCatCd} onChange={(event)=>{setInputCatCd(event.target.value);}} label_str = '코드' placeholder_str='코드를 입력하세요.'/>
-                </div>
-                <div className='input_container_box'>
-                    <div className="input_container select">
-                      <span className='ol_dot'/>
-                        <label>상위 카테고리</label>
-                        <Select value={inputUpCatCd} options = {upCatSelectOptions} onChange = {(e)=>{onSelectChange(e)}}/>
-                    </div>
-                    <Input type = 'checkbox' isChecked={inputPrintYn == 'y' ? true : false} label_str = '출력대상여부' imgs = {properties.imgs} onChange = {(event)=>{setInputPrintYn(inputPrintYn == 'y' ? 'n' : 'y');}}/> 
-                    <Input type = 'checkbox' isChecked={inputMgtYn == 'y' ? true : false} label_str = '관리항목유무' imgs = {properties.imgs} onChange = {(event)=>{setInputMgtYn(inputMgtYn == 'y' ? 'n' : 'y');}}/>
-                </div>
+              <div className='content_header'>카테고리 신규 생성
+                  <div className='button_box'>
+                      <BoardButton type="cancel" color="white" show={showCancelBtn} onClick={onCancelBtnClick}/>
+                      <BoardButton type="cancel_put" color="white" show={showEditCancelBtn} onClick={onEditCancelClick}/>
+                      <BoardButton type="put" color="white" show={showEditBtn} onClick={onEditClick}/>
+                      <BoardButton type="save" color="orange" onClick={saveCategory}/>
+                      <BoardButton type="delete" color="white" show={showDelBtn} onClick={deleteCategory}/>
+                  </div>
+              </div>
+              <div className='input_container_box'>
+                  {/*<Input type = 'hidden' value={catSeq} onChange={(event)=>{setCatSeq(event.target.value);} } />*/}
+                  <Input type = 'text' value={inputCatNm} onChange={(event)=>{setInputCatNm(event.target.value);}} label_str = '카테고리명' placeholder_str='카테고리명을 입력하세요.'/>
+                  <Input type = 'text' value={inputCatCd} onChange={(event)=>{setInputCatCd(event.target.value);}} label_str = '코드' placeholder_str='코드를 입력하세요.'/>
+              </div>
+              <div className='input_container_box'>
+                  <div className="input_container select">
+                    <span className='ol_dot'/>
+                      <label>상위 카테고리</label>
+                      <Select value={inputUpCatCd} options = {upCatSelectOptions} onChange = {(e)=>{onSelectChange(e)}}/>
+                  </div>
+                  <Input type = 'checkbox' isChecked={inputPrintYn == 'y' ? true : false} label_str = '출력대상여부' imgs = {properties.imgs} onChange = {(event)=>{setInputPrintYn(inputPrintYn == 'y' ? 'n' : 'y');}}/> 
+                  <Input type = 'checkbox' isChecked={inputMgtYn == 'y' ? true : false} label_str = '관리항목유무' imgs = {properties.imgs} onChange = {(event)=>{setInputMgtYn(inputMgtYn == 'y' ? 'n' : 'y');}}/>
+              </div>
             </div>
             <div className='content_box cat_sel'>
                 <div className='content_header'><span className='title'>하위 카테고리명</span></div>
                 <div className='search_box_parent'>
-                    <SearchBox  searchSelectValue={selectSearchKey} searchTextValue={inputSearchStr} searchTextOnChange={(e)=>{setInputSearchStr(e.target.value);}} searchSelectOnChange={(e)=>{setSelectSearchKey(e.target.value);}} searchTextOnKeyUp={(e)=>{inputSearchStrOnKeyUp(e)}} options={selectOptions} search={search} reset={searchReset} disabled={formStateStr == 'u' ? true : false} placeholder_str='검색옵션 선택 후 검색어를 입력하세요.'/>
+                    <SearchBox  searchSelectValue={selectSearchKey} searchTextValue={inputSearchStr} searchTextOnChange={(e)=>{setInputSearchStr(e.target.value);}} searchSelectOnChange={(e)=>{setSelectSearchKey(e.target.value);}} searchTextOnKeyUp={(e)=>{inputSearchStrOnKeyUp(e)}} options={selectOptions} search={onClickSearchBtn} reset={onClickSearchResetBtn} disabled={showEditCancelBtn ? true : false} placeholder_str='검색옵션 선택 후 검색어를 입력하세요.'/>
                 </div>
                 <BoardList type="DtAttach" placeholder_str='검색옵션 선택 후 검색어를 입력하세요.' thead={[{key : 'catCd', value : '카테고리 코드'},{key : 'catNm', value : '카테고리 이름'}]} tbody={ChildCategoryList} onRowClick={onRowClick} selectedId={rowClickCatSeq} />
                 <div className='pagenation_box'>
-                    <div className='label'>총 카운트 {reactJsPgListSize}</div>
+                    <div className='label'>총 카운트 {totalListSize}</div>
                     <div className={reactJsPgShow ? 'pg show' : 'pg hide'}>
-                      <ReactJsPg ref={reactJsPgRef} getList={getChildCategoryList} requestHeader={requestHeader} requestBody={requestBody} rowClick={onRowClick} editCancelClick={onEditCancelClick} rowClickCatSeq={rowClickCatSeq} selectedKeys={selectedKeys} selectedInfo={selectedInfo}/>
-                      
+                      <ReactJsPg ref={reactJsPgRef} getList={getChildCategoryList} requestHeader={requestHeader} rowClick={onRowClick} editCancelClick={onEditCancelClick} rowClickCatSeq={rowClickCatSeq} selectedKeys={selectedKeys} selectedInfo={selectedInfo}/>
+                      {/* getChildCategoryList 이거 콜백 필요 없는지 확인 */}
                     </div>
                 </div>
             </div>
@@ -706,14 +697,15 @@ class ReactJsPg extends React.Component {
           , page: this.state.activePage  // 새로운 activePage로 업데이트
           , size: this.state.pageSize    // 현재 페이지 크기를 사용
         };
-
-        if(this.props.requestBody.upCatCd){
+        
+        if(this.props.selectedInfo.node.upCatCd){
           let updatedRequestBody = {
             catSeq : this.props.selectedInfo.node.catSeq
             , catCd : this.props.selectedKeys[0]
             , catNm : this.props.selectedInfo.node.title
             , upCatCd : this.props.selectedInfo.node.upCatCd == null ? '' : this.props.selectedInfo.node.upCatCd
             , upCatNm : this.props.selectedInfo.node.upCatNm
+            , od : this.props.selectedInfo.node.od
           }
           this.props.getList(updatedHeader, updatedRequestBody);
         } else {
