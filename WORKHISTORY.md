@@ -1,5 +1,10 @@
 # sapa_board
 #
+# 2024-12-19
+#      1. save, insert 로직 수정
+#      2. formState 수정
+#      3. 
+#
 # 2024-12-16
 #      1. react status 분리
 #
