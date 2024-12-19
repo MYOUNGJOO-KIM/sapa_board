@@ -1,64 +1,82 @@
-import React, {useEffect, useRef, useState} from 'react';  
-import './../assets/css/app.css';
-import './../assets/css/container.css';
+import React, {useEffect, useRef, useState} from 'react'; 
+import { useForm } from 'react-hook-form';
+import axios from 'axios';
+
+import { CategoryContext, useCategoryContext } from '../CategoryContexts';
+import { categoryRegex } from './../utils/serviceRegex';
+import { DATA_MAX_LENGTH, DATA_MGT_MAX_LENGTH } from './../utils/serviceMaxLength';
+import { datePattern01, datePattern02, datePattern03, datePattern04 } from './../utils/patterns';
+import Header from './Header'; 
 import Input from '../board/FormInput'; 
 import BoardList from '../board/BoardList';
 import Select from './../board/FormSelect'
 import BoardButton from './../board/BoardButton';
 import ReactJsPagination from "react-js-pagination";
 import SearchBox from "./../board/SearchBox";
+
 import CategoryListTree from './CategoryListTree';
-import Header from './Header';
-import axios from 'axios';
-import { CategoryContext, useCategoryContext } from '../CategoryContexts';
-import { categoryRegex } from './../utils/serviceRegex';
-import { format } from 'date-fns';
-import { fromZonedTime } from 'date-fns-tz';
+
+import './../assets/css/app.css';
+import './../assets/css/container.css';
+
+
 
 axios.defaults.withCredentials = true;
 
 function Container( properties ){ 
+  
   const apiBaseUrl = process.env.REACT_APP_API_BASE_URL;
   const urlParams = new URLSearchParams(window.location.search);
   const userId = urlParams.get('userId') || "anonymous";
 
   const { cleanParam } = useCategoryContext();
   const [categoryListTreeList, setCategoryListTreeList] = useState([]);
-
+  const [categoryListTreeUpdateList, setCategoryListTreeUpdateList] = useState([]);
   const [ChildCategoryList, setChildCategoryList] = useState([]);
   const [upCatSelectOptions, setUpCatSelectOptions] = useState([{key : '', value : '선택 없음'}]);
-  
+
+  const [isTreeOpen, setIsTreeOpen] = useState(false);
+  const [treeMgtYn, setTreeMgtYn] = useState('');
+  const [treePrintYn, setTreePrintYn] = useState('');
+
   const [selectedKeys, setSelectedKeys] = useState([]);
   const [selectedInfo, setSelectedInfo] = useState(null);
+  
   const [rowClickCatCd, setRowClickCatCd] = useState('');
   const [rowClickCatSeq, setRowClickCatSeq] = useState('');
 
   const [catSeq, setCatSeq] = useState('');
-  const [inputCatNm, setInputCatNm] = useState('');
   const [inputCatCd, setInputCatCd] = useState('');
+  const [inputCatNm, setInputCatNm] = useState('');
   const [inputUpCatCd, setInputUpCatCd] = useState('');
   const [inputUpCatNm, setInputUpCatNm] = useState('');
   const [inputPrintYn, setInputPrintYn] = useState('y');//false
   const [inputMgtYn, setInputMgtYn] = useState('y');//false
+  const [od, setOd] = useState('');
 
   const [selectSearchKey, setSelectSearchKey] = useState('');//select
   const [inputSearchStr, setInputSearchStr] = useState('');//text
   
+  const [showCancelBtn, setShowCancelBtn] = useState(false);
   const [showDelBtn, setShowDelBtn] = useState(false);
   const [showEditBtn, setShowEditBtn] = useState(false);
   const [showEditCancelBtn, setShowEditCancelBtn] = useState(false);
 
-  const [reactJsPgListSize, setReactJsPgListSize] = useState(0);
-  const reactJsPgRef = useRef(null);
-
-  const [treeMgtYn, setTreeMgtYn] = useState('');
-  const [treePrintYn, setTreePrintYn] = useState('');
-
-  const [isTreeOpen] = useState(true);
   const [reactJsPgShow, setReactJsPgShow] = useState(false);
+  const [totalListSize, setReactJsPgListSize] = useState(0);
 
-  const [formStateStr, setFormStateStr] = useState('i');
+  const [requestHeader, setRequestHeader] = useState({
+    activePage: 1,
+    listSize: 0,
+    size: 10,
+    searchKey: '',
+    searchStr: ''
+  });
 
+  const selectOptions = [
+    {key : 'catNm', value : '카테고리 이름'}
+    , {key : 'catCd', value : '카테고리 코드'}
+  ];
 
   const getCategoryListTreeList = async () => {
     let response;
@@ -78,50 +96,19 @@ function Container( properties ){
   }
 
   useEffect(() => {
-    getCategoryListTreeList();  // 첫 렌더링 시에 getCategoryListTreeList 호출
+    getCategoryListTreeList();
   }, []);
 
   useEffect(() => {
     if (isTreeOpen) {
-      requestHeader.page=1;requestHeader.size=10;
       getChildCategoryList(requestHeader, {});
-      getParentCategoryList({},{}); // category 리스트를 가져오고 상태를 업데이트
+      getParentCategoryList({},{});
     }
   }, [isTreeOpen]);
 
-  const formState = {
-    state : formStateStr, 
-    treeSelected : {
-      selectedKeys : selectedKeys, 
-      selectedInfo : selectedInfo}, 
-      rowSelected : {
-        rowClickCatSeq : rowClickCatSeq, 
-        rowClickCatCd : rowClickCatCd
-      }
-  };
-  
-  const requestHeader = {
-    page: ''//1
-    , size: ''//10
-    , searchKey : ''//inputSearchKey
-    , searchStr : ''//inputSearchStr
-  };
-
-  const selectOptions = [
-    {key : 'catNm', value : '카테고리 이름'}
-    , {key : 'catCd', value : '카테고리 코드'}
-  ];
-
-  const getChildCategoryList = async (requestHeader, requestBody) => {
-    console.log("몇번 실행되냐 3");
-
-    let rqHeader = cleanParam(requestHeader);
+  const getChildCategoryList = async (requestHeaderParam, requestBody) => {
+    let rqHeader = cleanParam(requestHeaderParam);
     let rqBody = cleanParam(requestBody);
-
-    // if(requestBody){//신규추가, 수정 이 두 상태가 한 state에 있어야 하는 관계로, 임시 처리
-    //   rqBody = cleanParam(requestBody);
-    // }
-    
     let response;
 
     try {
@@ -133,23 +120,12 @@ function Container( properties ){
 
       if(response.data != null && response.data != ''){
         totalCnt = response.data[0].totalCnt;
-        //responseRef.current = response;
         setChildCategoryList(response.data);
-        reactJsPgSet({totalCnt:totalCnt, show:true});
+        reactJsPgSet({...rqHeader, totalCnt:totalCnt, show:true});
         
-        //setTriggerUpdate(prev => !prev);
-        //setReactJsPgShow(true);
-        // if(reactJsPgRef.current){
-        //   reactJsPgRef.current.updateListSize(totalCnt);
-        // }
-      } 
-      // setReactJsPgListSize(totalCnt);
-        
-      // if(reactJsPgRef.current){
-      //   reactJsPgRef.current.updateListSize(totalCnt);
-      // }
-
-      // setChildCategoryList(response.data);
+      } else {
+        setChildCategoryList([]);
+      }
       
     } catch (error) {
       response = error;
@@ -159,7 +135,7 @@ function Container( properties ){
     }
   };
 
-  const getParentCategoryList = async (requestHeader, requestBody) => {//초기화 이후엔 CUD 시 수정된 항목 반영
+  const getParentCategoryList = async (requestHeader, requestBody) => {
 
     let response;
 
@@ -184,11 +160,11 @@ function Container( properties ){
     }
   };
 
-  const saveCategory = async (requestHeader, requestBody) => {
+  const saveCategory = async (requestHeaderParam, requestBody) => {
     if(validation(requestBody)){
       requestBody.chgId = userId;//테스트 때문에
 
-      const rqHeader = cleanParam(requestHeader);
+      const rqHeader = cleanParam(requestHeaderParam);
       const rqBody = cleanParam(requestBody);
 
       let response;
@@ -206,14 +182,11 @@ function Container( properties ){
         response = error;
         alert("카테고리 업데이트 실패\n"+response.response.data.message);
       } finally {
-        delete rqBody.inId;
-        delete requestBody.chgId;
-        delete rqBody.chgId;
 
-        //onCancelBtnClick(false);
-        cancel(false);
+        cancel();
         getCategoryListTreeList();
         getParentCategoryList({},{});
+        getChildCategoryList(requestHeaderParam, {});
         
         properties.setLoadYn(false);
         return response;
@@ -221,10 +194,24 @@ function Container( properties ){
     }
   };
 
-  const deleteCategory = async (requestHeader, requestBody) => {
+  const onSaveBtnClick = function () {
+    let uParam = {
+      catSeq : catSeq 
+      , catCd : inputCatCd
+      , catNm : inputCatNm
+      , upCatCd : inputUpCatCd
+      , upCatNm : inputUpCatNm
+      , printYn : inputPrintYn
+      , mgtYn : inputMgtYn
+      , od : od
+    };
+    saveCategory(requestHeader, uParam);
+  }
+
+  const deleteCategory = async (requestHeaderParam, requestBody) => {
     if(validation(requestBody)){
       requestBody.chgId = userId;//테스트 때문에
-      const rqHeader = cleanParam(requestHeader);
+      const rqHeader = cleanParam(requestHeaderParam);
       const rqBody = cleanParam(requestBody);
   
       let response;
@@ -236,13 +223,11 @@ function Container( properties ){
         response = error;
         alert("카테고리 삭제 실패\n"+response.response.data.message);
       } finally {
-        delete requestBody.chgId;
-        delete rqBody.chgId;
 
-        cancel(false);
-        //onCancelBtnClick(false);
+        cancel();
         getCategoryListTreeList();
         getParentCategoryList({},{});
+        getChildCategoryList(requestHeaderParam, {});
 
         properties.setLoadYn(false);
         return response;
@@ -250,23 +235,46 @@ function Container( properties ){
     }
   };
 
+  const onDeleteBtnClick = function () {
+    let uParam;
+
+    if(rowClickCatSeq){
+      uParam = {
+        catSeq : catSeq 
+        , catCd : inputCatCd
+        , catNm : inputCatNm
+        , upCatCd : inputUpCatCd
+        , upCatNm : inputUpCatNm
+      };
+    } else {
+      uParam = {
+        catSeq : selectedInfo.node.catSeq 
+        , catCd : selectedKeys[0]
+        , catNm : selectedInfo.node.title
+        , upCatCd : selectedInfo.node.upCatCd
+        , upCatNm : selectedInfo.node.upCatNm
+      };
+    }
+    deleteCategory(requestHeader, uParam);
+  }
+
+  const stateSelectedClear = function (){
+    setSelectedKeys([]);
+    setSelectedInfo(null);
+  }
+
   const stateClear = function (){
     setCatSeq('');
     setOd('');
-    setSelectedKeys([]);
-    setSelectedInfo(null);
     setRowClickCatCd('');
     setRowClickCatSeq('');
-    setShowCancelBtn(false);
-    setShowDelBtn(false);
-    setShowEditBtn(false);
-    setShowEditCancelBtn(false);
+    btnView('i');
     setChildCategoryList([]);
   }
 
   const stateSet = (state) => {
     if (state.catSeq || state.catSeq == '') {
-       setCatSeq(state.catSeq);
+      setCatSeq(state.catSeq);
      }
     if (state.od || state.od == '') {
       setOd(state.od);
@@ -284,16 +292,6 @@ function Container( properties ){
       setRowClickCatSeq(state.rowClickCatSeq);
     }
   }
-
-  // useEffect(() => {
-  //   if (isStateSetUpCntUpdated.current) {
-  //     // 상태 업데이트가 완료된 후에만 실행
-  //     setTimeout(() => {
-  //       getChildCategoryList();
-  //       isStateSetUpCntUpdated.current = false;  // 다시 플래그를 초기화
-  //     }, 0);  // setTimeout을 사용하여 상태 업데이트 후 실행되도록 처리
-  //   }
-  // }, [stateSetUpCnt]);
 
   const inputClear = function(){
     setInputCatNm('');
@@ -328,126 +326,182 @@ function Container( properties ){
   const reactJsPgClear = function (state) {
     setReactJsPgListSize(0);
     setReactJsPgShow(false);
-    reactJsPgRef.current.updateListSize(0);
-    reactJsPgRef.current.updateActivePage();
+
+    setRequestHeader({
+      ...requestHeader,
+      activePage : 1,
+      listSize : 0
+    });
   }
 
   const reactJsPgSet = function (state) {
     setReactJsPgListSize(state.totalCnt);
     setReactJsPgShow(true);
-    reactJsPgRef.current.updateListSize(state.totalCnt);
+
+    setRequestHeader({
+      ...requestHeader,
+      activePage : state.activePage,
+      listSize : state.totalCnt
+    });
   }
 
-  
+  const reactJsPgChange = (pageNumber) => {
+    rowClickCancel();
+
+    const requestHeaderParam = {
+      ...requestHeader,  // 기존 상태 복사
+      activePage: pageNumber,  // 새로운 activePage로 업데이트
+    };
+
+    setRequestHeader({
+      ...requestHeader,
+      activePage: pageNumber
+    });
+
+    if (selectedKeys.length > 0) {
+      const updatedRequestBody = {
+        catSeq: selectedInfo.node.catSeq,
+        catCd: selectedInfo.node.key,
+        catNm: selectedInfo.node.title,
+        upCatCd: selectedInfo.node.upCatCd || '',
+        upCatNm: selectedInfo.node.upCatNm,
+        od: selectedInfo.node.od,
+      };
+      getChildCategoryList(requestHeaderParam, updatedRequestBody);
+      btnView('ti');
+    } else {
+      getChildCategoryList(requestHeaderParam, {});
+      btnView('i');
+    }
+  };
+
+  const btnView = function (state){
+    switch(state){
+      case 'i' : 
+        setShowCancelBtn(false);
+        setShowEditBtn(false);
+        setShowEditCancelBtn(false);
+        setShowDelBtn(false);
+      break;
+      case 'u' :
+        setShowCancelBtn(false);
+        setShowEditBtn(false);
+        setShowEditCancelBtn(true);
+        setShowDelBtn(true);
+      break;
+      case 'ti' : 
+        setShowCancelBtn(true);
+        setShowEditBtn(true);
+        setShowEditCancelBtn(false);
+        setShowDelBtn(false);
+      break;
+      case 'tu' :
+        setShowCancelBtn(true);
+        setShowEditBtn(false);
+        setShowEditCancelBtn(true);
+        setShowDelBtn(true);
+      break;
+    }
+  }
 
   const search = function(e){
-    //reactJsPgClear();
-
-    // setSelectSearchKey(selectSearchKey); 
-    // setInputSearchStr(inputSearchStr); 
-
-
-    // requestHeader.searchKey = selectSearchKey;
-    // requestHeader.searchStr = inputSearchStr;
-    // if(reactJsPgRef.current){
-    //   reactJsPgRef.current.updateActivePage();
-    // }
-    getChildCategoryList({...requestHeader, searchKey : selectSearchKey, searchStr : inputSearchStr},{});
-  }
-
-  const onClickSearchBtn = function(e){
-    //reactJsPgClear();
-    search();
+    let iParam = {};
+    let requestHeaderParam = {
+      activePage: 1,
+      listSize: 0,
+      size: 10,
+      searchKey: selectSearchKey,
+      searchStr: inputSearchStr
+    };
+    if(selectedKeys.length > 0){
+      iParam = {
+        catSeq : selectedInfo.node.catSeq 
+        , catNm : selectedInfo.node.title  
+        , catCd : selectedKeys[0] 
+        , upCatCd : selectedInfo.node.upCatCd 
+        , upCatNm : selectedInfo.node.upCatNm 
+        , od : selectedInfo.node.od
+      }
+    }
+    getChildCategoryList(requestHeaderParam, iParam);
   }
 
   const searchReset = function(e){
-    //reactJsPgClear();
     setSelectSearchKey(''); 
     setInputSearchStr(''); 
-    // requestHeader.searchKey = '';
-    // requestHeader.searchStr = '';
-    // if(reactJsPgRef.current){
-    //   reactJsPgRef.current.updateActivePage();
-    // }
   }
 
   const onClickSearchResetBtn = function(e){
+    let requestHeaderParam = {
+      activePage: 1,
+      listSize: 0,
+      size: 10
+    }
     searchReset();
-    getChildCategoryList();
+    getChildCategoryList(requestHeaderParam, {});
   }
 
-  const cancel = function (isRow) {
-    if(!isRow){
-      stateClear();
-    }
+  const cancel = function () {
+    stateSelectedClear();
+    stateClear();
     searchReset();
     inputClear();
   }
 
-  const onCancelBtnClick = function (isRow) {//맹 수정중
-    cancel(isRow);
-    //reactJsPgClear();
-    getChildCategoryList({},{});
-
-    setShowCancelBtn(false);
-    setShowEditBtn(false);
-    setShowEditCancelBtn(false);
-    setShowDelBtn(false);
+  const onCancelBtnClick = function () {
+    let requestHeaderParam = {
+      activePage: 1,
+      listSize: 0,
+      size: 10
+    }
+    cancel();
+    getChildCategoryList(requestHeaderParam, {});
   }
 
   const onEditClick = function(){
-    //u 상태
-    cancel(true);
+    //tu, u
+    editCancel();
     let uParam = {};
     let stateSetParam = {};
-    const requestHeader = {
-      page: 1
-      , size: 10
-      , searchKey : ''//inputSearchKey
-      , searchStr : ''//inputSearchStr
-    };
+    let btnViewState = '';
+
     uParam = {
-      catSeq : selectedInfo.node.catSeq     //사용
-      , catNm : selectedInfo.node.title    //사용
-      , catCd : selectedKeys[0]    //사용
-      , upCatCd : selectedInfo.node.upCatCd  //사용
-      , upCatNm : selectedInfo.node.upCatNm  //사용
-      , printYn : selectedInfo.node.printYn  //사용
-      , mgtYn : selectedInfo.node.mgtYn    //사용
-      , od : selectedInfo.node.od       //사용
+      catSeq : selectedInfo.node.catSeq 
+      , catNm : selectedInfo.node.title 
+      , catCd : selectedKeys[0]   
+      , upCatCd : selectedInfo.node.upCatCd 
+      , upCatNm : selectedInfo.node.upCatNm 
+      , printYn : selectedInfo.node.printYn
+      , mgtYn : selectedInfo.node.mgtYn  
+      , od : selectedInfo.node.od 
     }
-    stateSetParam = {...uParam, selectedKeys : selectedKeys, selectedInfo : selectedInfo};
+    btnViewState = selectedKeys.length > 0 ? 'tu' : 'u';
+
+    stateSet(uParam);
 
     inputSet(uParam);
 
-    setShowCancelBtn(true);
-    setShowEditBtn(false);
-    setShowEditCancelBtn(true);
-    setShowDelBtn(true);
+    btnView(btnViewState);
   }
 
   const editCancel = function(){
-    searchReset();
     inputClear();
   }
 
   const onEditCancelClick = function(){
-    
+    //ti, i
     editCancel();
     let iParam = {};
     let stateSetParam = {};
-
     if(selectedKeys.length > 0){
       iParam = {
-        upCatCd : selectedInfo.node.key  //사용
-        , upCatNm : selectedInfo.node.title  //사용
-        , printYn : selectedInfo.node.printYn  //사용
-        , mgtYn : selectedInfo.node.mgtYn    //사용
+        upCatCd : selectedInfo.node.key 
+        , upCatNm : selectedInfo.node.title 
+        , printYn : selectedInfo.node.printYn 
+        , mgtYn : selectedInfo.node.mgtYn 
       }
-      setShowCancelBtn(true);
-      setShowEditBtn(true);
-      setShowEditCancelBtn(false);
-      setShowDelBtn(false);
+      
+      btnView('ti');
     } else {
       iParam = {
         upCatCd : ''
@@ -455,20 +509,15 @@ function Container( properties ){
         , printYn : 'y'
         , mgtYn : 'y'
       }
-      setShowCancelBtn(false);
-      setShowEditBtn(false);
-      setShowEditCancelBtn(false);
-      setShowDelBtn(false);
+      btnView('i');
     }
-
-    stateSetParam = {rowClickCatCd : '', rowClickCatSeq : ''};
+    stateSetParam = {rowClickCatCd : '', rowClickCatSeq : '', catSeq : '', od:''};
     stateSet(stateSetParam);
     inputSet({...iParam, ...stateSetParam});
   }
 
   const inputSearchStrOnKeyUp = function(e){
     if(e.key == 'Enter'){
-      //reactJsPgClear();
       search();
     }
   }
@@ -486,27 +535,23 @@ function Container( properties ){
       alert('카테고리 코드가 잘못 입력되었습니다.');
       return false;
     }
-
     if (!categoryRegex.catNm.test(data.catNm)) {
       alert('카테고리명이 잘못 입력되었습니다.');
       return false;
     }
-
     return true;
   }
 
   const onTreeSelect = (selectedKeys, selectedInfo, d,e,f) => {
-    //i 상태
-    //onCancelBtnClick(false);
-    cancel(false);
+    //ti, i
+    cancel();
     let iParam = {};
     let uParam = {};
     let stateSetParam = {};
-    const requestHeader = {
-      page: 1
-      , size: 10
-      , searchKey : ''//inputSearchKey
-      , searchStr : ''//inputSearchStr
+    const requestHeaderParam = {
+      activePage: 1,
+      listSize: 0,
+      size: 10
     };
     if(selectedKeys.length > 0){
       iParam = {
@@ -516,95 +561,72 @@ function Container( properties ){
         , mgtYn : selectedInfo.node.mgtYn
       }
       uParam = {
-        catSeq : selectedInfo.node.catSeq     //사용
-        , catNm : selectedInfo.node.title    //사용
-        , catCd : selectedKeys[0]    //사용
-        , upCatCd : selectedInfo.node.upCatCd  //사용
-        , upCatNm : selectedInfo.node.upCatNm  //사용
-        // , printYn : selectedInfo.node.printYn  //사용 //조회 이거 영향받음
-        // , mgtYn : selectedInfo.node.mgtYn    //사용 //조회 이거 영향받음
-        , od : selectedInfo.node.od       //사용
+        catSeq : selectedInfo.node.catSeq   
+        , catNm : selectedInfo.node.title  
+        , catCd : selectedKeys[0]   
+        , upCatCd : selectedInfo.node.upCatCd  
+        , upCatNm : selectedInfo.node.upCatNm  
+        // , printYn : selectedInfo.node.printYn //조회 이거 영향받음
+        // , mgtYn : selectedInfo.node.mgtYn    //조회 이거 영향받음
+        , od : selectedInfo.node.od 
       }
-      stateSetParam = {...uParam, selectedKeys : selectedKeys, selectedInfo : selectedInfo};
+      stateSetParam = {...iParam, selectedKeys : selectedKeys, selectedInfo : selectedInfo};
       stateSet(stateSetParam);
       inputSet(iParam);
 
-      getChildCategoryList(requestHeader, uParam);
+      getChildCategoryList(requestHeaderParam, uParam);
 
-      setShowCancelBtn(true);
-      setShowEditBtn(true);
-      setShowEditCancelBtn(false);
-      setShowDelBtn(false);
+      btnView('ti');
     } else {
-      getChildCategoryList(requestHeader, {});
+      getChildCategoryList(requestHeaderParam, {});
 
-      setShowCancelBtn(false);
-      setShowEditBtn(false);
-      setShowEditCancelBtn(false);
-      setShowDelBtn(false);
+      btnView('i');
     }
-
   };
 
   const onRowClick = function(selectedObj){
-    //u 상태
+    //tu, u, ti, i
     editCancel();
-    let iParam = {};
+    let uParam = {};
     let stateSetParam = {};
-    const requestHeader = {
-      page: 1
-      , size: 10
-      , searchKey : ''//inputSearchKey
-      , searchStr : ''//inputSearchStr
-    };
+    let btnViewState = '';
 
-    //공통
-    if (rowClickCatSeq != selectedObj.catSeq) {
-      
-      stateSetParam = {rowClickCatCd : selectedObj.catCd, rowClickCatSeq : selectedObj.catSeq};
-      
-      setShowCancelBtn(true);
-      setShowEditBtn(false);
-      setShowEditCancelBtn(true);
-      setShowDelBtn(true);
+    if (rowClickCatSeq != selectedObj.catSeq) {//정보 세팅
 
+      btnViewState = selectedKeys.length > 0 ? 'tu' : 'u';
+      
+      stateSetParam = {rowClickCatCd : selectedObj.catCd, rowClickCatSeq : selectedObj.catSeq, catSeq : selectedObj.catSeq, od : selectedObj.od};
+      
       stateSet(stateSetParam);
       inputSet(selectedObj);
-    } else {
+    } else {//clear
 
-      if(selectedKeys.length > 0){
-        iParam = {
+      if(selectedKeys.length > 0){//트리선택
+        btnViewState = 'ti';
+        uParam = {
           upCatCd : selectedKeys[0]
           , upCatNm : selectedInfo.node.title
           , printYn : selectedInfo.node.printYn
           , mgtYn : selectedInfo.node.mgtYn
         }
-        setShowCancelBtn(true);
-        setShowEditBtn(true);
-        setShowEditCancelBtn(false);
-        setShowDelBtn(false);
+        stateSetParam = {rowClickCatCd : '', rowClickCatSeq : '', catSeq : '', od : ''};
+        
+        stateSet(stateSetParam);
+        inputSet({...uParam, ...stateSetParam});
       } else {
-        iParam = {
-          upCatCd : ''
-          , upCatNm : ''
-          , printYn : 'y'
-          , mgtYn : 'y'
-        }
-        setShowCancelBtn(false);
-        setShowEditBtn(false);
-        setShowEditCancelBtn(false);
-        setShowDelBtn(false);
+        btnViewState = 'i';
+        rowClickCancel();
       }
-      
-      stateSetParam = {rowClickCatCd : '', rowClickCatSeq : ''};
-      
-      stateSet(stateSetParam);
-      inputSet({...iParam, ...stateSetParam});
     }
+    btnView(btnViewState);
   }
 
-  
-  
+  const rowClickCancel = function () {
+    //ti, i
+    const stateSetParam = {rowClickCatCd : '', rowClickCatSeq : '', catSeq : '', od : ''};
+    stateSet(stateSetParam);
+    inputClear();
+  }
   
 
   return ( 
@@ -623,12 +645,11 @@ function Container( properties ){
                       <BoardButton type="cancel" color="white" show={showCancelBtn} onClick={onCancelBtnClick}/>
                       <BoardButton type="cancel_put" color="white" show={showEditCancelBtn} onClick={onEditCancelClick}/>
                       <BoardButton type="put" color="white" show={showEditBtn} onClick={onEditClick}/>
-                      <BoardButton type="save" color="orange" onClick={saveCategory}/>
-                      <BoardButton type="delete" color="white" show={showDelBtn} onClick={deleteCategory}/>
+                      <BoardButton type="save" color="orange" onClick={onSaveBtnClick}/>
+                      <BoardButton type="delete" color="white" show={showDelBtn} onClick={onDeleteBtnClick}/>
                   </div>
               </div>
               <div className='input_container_box'>
-                  {/*<Input type = 'hidden' value={catSeq} onChange={(event)=>{setCatSeq(event.target.value);} } />*/}
                   <Input type = 'text' value={inputCatNm} onChange={(event)=>{setInputCatNm(event.target.value);}} label_str = '카테고리명' placeholder_str='카테고리명을 입력하세요.'/>
                   <Input type = 'text' value={inputCatCd} onChange={(event)=>{setInputCatCd(event.target.value);}} label_str = '코드' placeholder_str='코드를 입력하세요.'/>
               </div>
@@ -645,14 +666,13 @@ function Container( properties ){
             <div className='content_box cat_sel'>
                 <div className='content_header'><span className='title'>하위 카테고리명</span></div>
                 <div className='search_box_parent'>
-                    <SearchBox  searchSelectValue={selectSearchKey} searchTextValue={inputSearchStr} searchTextOnChange={(e)=>{setInputSearchStr(e.target.value);}} searchSelectOnChange={(e)=>{setSelectSearchKey(e.target.value);}} searchTextOnKeyUp={(e)=>{inputSearchStrOnKeyUp(e)}} options={selectOptions} search={onClickSearchBtn} reset={onClickSearchResetBtn} disabled={showEditCancelBtn ? true : false} placeholder_str='검색옵션 선택 후 검색어를 입력하세요.'/>
+                    <SearchBox  searchSelectValue={selectSearchKey} searchTextValue={inputSearchStr} searchTextOnChange={(e)=>{setInputSearchStr(e.target.value);}} searchSelectOnChange={(e)=>{setSelectSearchKey(e.target.value);}} searchTextOnKeyUp={(e)=>{inputSearchStrOnKeyUp(e)}} options={selectOptions} search={search} reset={onClickSearchResetBtn} disabled={showEditCancelBtn ? true : false} placeholder_str='검색옵션 선택 후 검색어를 입력하세요.'/>
                 </div>
                 <BoardList type="DtAttach" placeholder_str='검색옵션 선택 후 검색어를 입력하세요.' thead={[{key : 'catCd', value : '카테고리 코드'},{key : 'catNm', value : '카테고리 이름'}]} tbody={ChildCategoryList} onRowClick={onRowClick} selectedId={rowClickCatSeq} />
                 <div className='pagenation_box'>
                     <div className='label'>총 카운트 {totalListSize}</div>
                     <div className={reactJsPgShow ? 'pg show' : 'pg hide'}>
-                      <ReactJsPg ref={reactJsPgRef} getList={getChildCategoryList} requestHeader={requestHeader} rowClick={onRowClick} editCancelClick={onEditCancelClick} rowClickCatSeq={rowClickCatSeq} selectedKeys={selectedKeys} selectedInfo={selectedInfo}/>
-                      {/* getChildCategoryList 이거 콜백 필요 없는지 확인 */}
+                      <ReactJsPg reactJsPgChange={reactJsPgChange} requestHeader={requestHeader}/>
                     </div>
                 </div>
             </div>
@@ -667,18 +687,9 @@ export default Container;
 
 
 class ReactJsPg extends React.Component {
-  constructor(props) {
-    super(props);
-
-    this.state = {
-      activePage: 1,
-      listSize : 0,
-      pageSize : 10
-    };
-  }
-
-  updateActivePage = () => {
-    this.setState({activePage : 1});
+  
+  updateActivePage = (newActivePage) => {
+    this.setState({activePage : newActivePage});
   }
 
   updateListSize = (newSize) => {
@@ -686,43 +697,16 @@ class ReactJsPg extends React.Component {
   }
   
   handlePageChange(pageNumber) {
-    console.log(`Active page is ${pageNumber}`);
-    
-    this.setState({ activePage: pageNumber }, () => {
-      if (this.props.getList) {
-
-        const updatedHeader = {
-          searchKey : this.props.requestHeader.searchKey
-          , searchStr : this.props.requestHeader.searchStr
-          , page: this.state.activePage  // 새로운 activePage로 업데이트
-          , size: this.state.pageSize    // 현재 페이지 크기를 사용
-        };
-        
-        if(this.props.selectedInfo.node.upCatCd){
-          let updatedRequestBody = {
-            catSeq : this.props.selectedInfo.node.catSeq
-            , catCd : this.props.selectedKeys[0]
-            , catNm : this.props.selectedInfo.node.title
-            , upCatCd : this.props.selectedInfo.node.upCatCd == null ? '' : this.props.selectedInfo.node.upCatCd
-            , upCatNm : this.props.selectedInfo.node.upCatNm
-            , od : this.props.selectedInfo.node.od
-          }
-          this.props.getList(updatedHeader, updatedRequestBody);
-        } else {
-          this.props.getList(updatedHeader);
-        }
-  
-      }
-    });
+    this.props.reactJsPgChange(pageNumber);
   }
   
   render() {
     return (
       <ReactJsPagination
-        activePage={this.state.activePage}//Required
-        totalItemsCount={this.state.listSize}//Required
+        activePage={this.props.requestHeader.activePage}//Required
+        totalItemsCount={this.props.requestHeader.listSize}//Required
+        itemsCountPerPage={this.props.requestHeader.size}
         onChange={this.handlePageChange.bind(this)}//Required
-        itemsCountPerPage={this.state.pageSize}
         pageRangeDisplayed={5}
         innerClass='pagination'//ul className
         itemClass='n5'//li className
