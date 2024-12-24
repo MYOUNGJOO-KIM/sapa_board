@@ -1,19 +1,25 @@
 import React, {useEffect, useState, useRef} from 'react'; 
-import styled from 'styled-components';
-import './../assets/css/app.css';
-import './../assets/css/mgt_container.css';
+import { useForm } from 'react-hook-form';
+import axios from 'axios';
+
+import { CategoryContext, useCategoryContext } from '../CategoryContexts';
+import { mgtRegex } from './../utils/serviceRegex';
+import { MGT_MAX_LENGTH } from './../utils/serviceMaxLength';
+import Header from './Header';
 import Input from '../board/FormInput';  
 import BoardList from '../board/BoardList';
 import Select from './../board/FormSelect'
 import BoardButton from './../board/BoardButton';
-import axios from 'axios';
-import ReactJsPagination from "react-js-pagination";
 import SearchBox from "./../board/SearchBox";
-import Header from './Header';
+
 import CategoryListTree from './CategoryListTree';
-import { CategoryContext, useCategoryContext } from '../CategoryContexts';
-import { mgtRegex } from './../utils/serviceRegex';
-import { MGT_MAX_LENGTH } from './../utils/serviceMaxLength';
+import ReactJsPagination from "react-js-pagination";
+import ReactJsPg from './ReactJsPg';
+
+import './../assets/css/app.css';
+import './../assets/css/mgt_container.css';
+
+
 
 function MgtContainer( properties ){
     const apiBaseUrl = process.env.REACT_APP_API_BASE_URL;
@@ -21,39 +27,50 @@ function MgtContainer( properties ){
     const userId = urlParams.get('userId') || "anonymous";
 
     const { cleanParam, CategoryList, CategoryListLoading, CategoryListError } = useCategoryContext();
+    const [categoryListTreeList, setCategoryListTreeList] = useState([]);
     const [mgtList, setMgtList] = useState([]);
     
+    const [isTreeOpen, setIsTreeOpen] = useState(true);
+    const [treeMgtYn, setTreeMgtYn] = useState('y');
+    const [treePrintYn, setTreePrintYn] = useState('');
+
     const [selectedKeys, setSelectedKeys] = useState([]);
     const [selectedInfo, setSelectedInfo] = useState(null);
+
     const [rowClickMgtSeq, setRowClickMgtSeq] = useState('');
 
-    const [categoryListTreeList, setCategoryListTreeList] = useState([]);
-
     const [mgtSeq, setMgtSeq] = useState('');
-    const [inputCatNm, setInputCatNm] = useState('');
     const [inputCatCd, setInputCatCd] = useState('');
+    const [inputCatNm, setInputCatNm] = useState('');
     const [inputMgtNm, setInputMgtNm] = useState('');
     const [selectDataType, setSelectDataType] = useState('');
     const [inputMgtOrderSeq, setInputMgtOrderSeq] = useState('');
     
     const [showDelBtn, setShowDelBtn] = useState(false);
     
-    const [reactJsPgListSize, setReactJsPgListSize] = useState(0);
-    const reactJsPgRef = useRef(null);
-
     const [formDisabled, setFormDisabled] = useState(true);
-    const [treeMgtYn, setTreeMgtYn] = useState('y');
-    const [treePrintYn, setTreePrintYn] = useState('');
 
-    const [isTreeOpen, setIsTreeOpen] = useState(true);
+    const reactJsPgRef = useRef(null);
     const [reactJsPgShow, setReactJsPgShow] = useState(false);
+    const [totalListSize, setReactJsPgListSize] = useState(0);
+
+    const [requestHeader, setRequestHeader] = useState({
+      activePage: 1,
+      listSize: 0,
+      size: 10,
+      searchKey: '',
+      searchStr: ''
+    });
 
     const getCategoryListTreeList = async ( ) => {
       let response;
       try {
         if (!properties.loadYn){properties.setLoadYn(true);}
-        response = await axios.post(`${apiBaseUrl}/category/getTree`, {mgtYn:treeMgtYn, printYn:treePrintYn});//, {'content-type' : "application/json"}
-        setCategoryListTreeList(response.data);
+        response = await axios.post(`${apiBaseUrl}/category/getTree`, {mgtYn:treeMgtYn, printYn:treePrintYn});
+        if(response.data.length > 0){
+          setCategoryListTreeList(response.data);
+          setIsTreeOpen(true);
+        }
       } catch (error) {
         response = error;
       } finally {
@@ -63,27 +80,8 @@ function MgtContainer( properties ){
     }
 
     useEffect(() => {
-      if(isTreeOpen){
-        getCategoryListTreeList();
-
-      }
-    },[]);
-
-    if (!isTreeOpen) return null;
-
-    const requestHeader = {
-      page: 1
-      , size: 10
-    };
-  
-    const requestBody = {
-      catNm : inputCatNm
-      , catCd : inputCatCd
-      , mgtSeq : mgtSeq
-      , mgtNm : inputMgtNm
-      , dataType : selectDataType
-      , mgtOrderSeq : inputMgtOrderSeq
-    };
+      getCategoryListTreeList();
+    }, []);
 
     const dataTypeSelectOptions = [
       {key : '', value : '선택없음'}
@@ -100,20 +98,18 @@ function MgtContainer( properties ){
       , {key : 'number', value : '숫자 입력'}
     ];
 
-    const getMgtList = async (newRequestHeader) => {
-      if(newRequestHeader){
-        requestHeader.page = newRequestHeader.page ? newRequestHeader.page : requestHeader.page;
-        requestHeader.size = newRequestHeader.size ? newRequestHeader.size : requestHeader.size;
-      }
-
-      const rqHeader = cleanParam(requestHeader);
+    const getMgtList = async (requestHeaderParam, requestBody) => {
+      const rqHeader = cleanParam(requestHeaderParam);
       const rqBody = cleanParam(requestBody);
       let response;
 
       try {
         if (!properties.loadYn){properties.setLoadYn(true);}
+        reactJsPgClear();
         response = (await axios.post(`${apiBaseUrl}/category_mgt/get`, rqBody, {params:rqHeader}));//`${apiBaseUrl}/category_mgt/get`
+        
         let totalCnt = 0;
+
         if(response.data != null && response.data != ''){
           totalCnt = response.data[0].totalCnt;
 
@@ -124,15 +120,13 @@ function MgtContainer( properties ){
               }
             })
           });
-          setMgtList(response.data);
-          setReactJsPgShow(true);
-        }
-        setReactJsPgListSize(totalCnt);
-          
-        if(reactJsPgRef.current){
-          reactJsPgRef.current.updateListSize(totalCnt);
-        }
 
+          setMgtList(response.data);
+          reactJsPgSet({...rqHeader, totalCnt:totalCnt, show:true});
+          //setReactJsPgShow(true);
+        } else {
+
+        }
 
       } catch (error) {
         response = error;
@@ -142,10 +136,11 @@ function MgtContainer( properties ){
       }
     };
 
-    const saveMgt = async ( ) => {
+    const saveMgt = async (requestHeaderParam, requestBody) => {
       if(validation(requestBody)){
         requestBody.chgId = userId;
-        const rqHeader = cleanParam(requestHeader);
+
+        const rqHeader = cleanParam(requestHeaderParam);
         const rqBody = cleanParam(requestBody);
 
         let response;
@@ -156,7 +151,7 @@ function MgtContainer( properties ){
           } else {
             rqBody.inId = userId;
             response = (await axios.post(`${apiBaseUrl}/category_mgt/post`, rqBody, {params:rqHeader}));
-            rqBody.mgtSeq = response.data.mgtSeq;
+            //rqBody.mgtSeq = response.data.mgtSeq;
           }
 
           //getMgtList({});
@@ -167,196 +162,348 @@ function MgtContainer( properties ){
           response = error;
           alert("관리항목 업데이트 실패");
         } finally {
-          delete rqBody.inId;
-          delete requestBody.chgId;
-          delete rqBody.chgId;
-          onCancleClick();
+          // delete rqBody.inId;
+          // delete requestBody.chgId;
+          // delete rqBody.chgId;
+          onCancelBtnClick();
+          //onCancleClick();
           properties.setLoadYn(false);
           return response;
         }
       }
     };
+
+    const onSaveBtnClick = function () {
+      let uParam = {
+        mgtSeq : mgtSeq
+        , catCd : inputCatCd
+        , catNm : inputCatNm
+        , mgtNm : inputMgtNm
+        , dataType : selectDataType
+        , mgtOrderSeq : inputMgtOrderSeq
+      };
+      saveMgt(requestHeader, uParam);
+    }
   
-    const deleteMgt = async ( ) => {
+    const deleteMgt = async (requestHeaderParam, requestBody) => {
       if(validation(requestBody)){
         requestBody.chgId = userId;
-        const rqHeader = cleanParam(requestHeader);
+
+        const rqHeader = cleanParam(requestHeaderParam);
         const rqBody = cleanParam(requestBody);
     
         let response;
         try {
           if (!properties.loadYn){properties.setLoadYn(true);}
           response = (await axios.put(`${apiBaseUrl}/category_mgt/delete`, rqBody, {params:rqHeader}));
-          setMgtSeq('');
-          setInputMgtNm('');
-          setSelectDataType('');
-          setInputMgtOrderSeq('');
-          //getMgtList({});
+          // setMgtSeq('');
+          // setInputMgtNm('');
+          // setSelectDataType('');
+          // setInputMgtOrderSeq('');
 
           alert("관리항목 삭제 완료");
-
         } catch (error) {
           response = error;
           alert("관리항목 삭제 실패");
         } finally {
-          delete requestBody.chgId;
-          delete rqBody.chgId;
-          onCancleClick();
+          // delete requestBody.chgId;
+          // delete rqBody.chgId;
+          onCancelBtnClick();
+          //onCancleClick();
+          //getMgtList(requestHeaderParam, {});
+
           properties.setLoadYn(false);
           return response;
         }
       }
     };
+
+    const onDeleteBtnClick = function () {
+      let uParam;
+  
+      if(rowClickMgtSeq){
+        uParam = {
+          mgtSeq : mgtSeq
+          , catCd : inputCatCd
+          , catNm : inputCatNm
+          , mgtNm : inputMgtNm
+          , dataType : selectDataType
+          , mgtOrderSeq : inputMgtOrderSeq
+        };
+      } 
+      // else {
+      //   uParam = {
+      //     catSeq : selectedInfo.node.catSeq 
+      //     , catCd : selectedKeys[0]
+      //     , catNm : selectedInfo.node.title
+      //     , upCatCd : selectedInfo.node.upCatCd
+      //     , upCatNm : selectedInfo.node.upCatNm
+      //   };
+      // }
+      deleteMgt(requestHeader, uParam);
+    }
           
-    const stateClear = function(){
-            
+    const stateSelectedClear = function (){
       setSelectedKeys([]);
       setSelectedInfo(null);
-      setRowClickMgtSeq('');
-      
-      setMgtList([]);
-      setShowDelBtn(false);
-      
-      setReactJsPgListSize(0);
-      setReactJsPgShow(false);
-          
-      if(reactJsPgRef.current){
-        reactJsPgRef.current.updateListSize(0);
-      }
     }
     
-    const inputClear = function(){//우선 전체 초기화라고 가정. 취소 버튼 시 동작만 있음.
+    const stateClear = function(){
       setMgtSeq('');
+      setRowClickMgtSeq('');
+      setShowDelBtn(false);
+      setMgtList([]);
+      btnView('r');
+      setFormDisabled(true);
+      // setReactJsPgListSize(0);
+      // setReactJsPgShow(false);
+          
+      // if(reactJsPgRef.current){
+      //   reactJsPgRef.current.updateListSize(0);
+      // }
+    }
+    
+    const stateSet = (state) => {
+      if (state.mgtSeq || state.mgtSeq == '') {
+        setMgtSeq(state.mgtSeq);
+      }
+      if (state.selectedKeys || state.selectedKeys == '') {
+        setSelectedKeys(state.selectedKeys);
+      }
+      if (state.selectedInfo || state.selectedInfo == '') {
+        setSelectedInfo(state.selectedInfo);
+      }
+      if (state.rowClickMgtSeq || state.rowClickMgtSeq == '') {
+        setRowClickMgtSeq(state.rowClickMgtSeq);
+      }
+    }
+
+    const inputClear = function(){//우선 전체 초기화라고 가정. 취소 버튼 시 동작만 있음.
+      //setMgtSeq('');
+      setInputCatCd('');
+      setInputCatNm('');
       setInputMgtNm('');
       setSelectDataType('');
       setInputMgtOrderSeq('');
-      requestBody.mgtSeq = '';
-      requestBody.mgtNm = '';
-      requestBody.dataType = '';
-      requestBody.mgtOrderSeq = '';
     }
     
     const inputSet = function (mgt){
-      setMgtSeq(mgt.mgtSeq);
-      setInputMgtNm(mgt.mgtNm);
-      setSelectDataType(mgt.dataType);
-      setInputMgtOrderSeq(mgt.mgtOrderSeq);
-      requestBody.mgtSeq = mgt.mgtSeq;
-      requestBody.mgtNm = mgt.mgtNm;
-      requestBody.dataType = mgt.dataType;
-      requestBody.mgtOrderSeq = mgt.mgtOrderSeq;
+      if (mgt.catCd) {
+        setInputCatCd(mgt.catCd);
+      }
+      if (mgt.catNm) {
+        setInputCatNm(mgt.catNm);
+      }
+      if (mgt.mgtNm) {
+        setInputMgtNm(mgt.mgtNm);
+      }
+      if (mgt.dataType) {
+        setSelectDataType(mgt.dataType);
+      }
+      if (mgt.mgtOrderSeq) {
+        setInputMgtOrderSeq(mgt.mgtOrderSeq);
+      }
     }
   
-    const validation = function (data) {
+    const reactJsPgClear = function (state) {
+      setReactJsPgListSize(0);
+      setReactJsPgShow(false);
+  
+      setRequestHeader({
+        ...requestHeader,
+        activePage : 1,
+        listSize : 0
+      });
+    }
+  
+    const reactJsPgSet = function (state) {
+      setReactJsPgListSize(state.totalCnt);
+      setReactJsPgShow(true);
+  
+      setRequestHeader({
+        ...requestHeader,
+        activePage : state.activePage,
+        listSize : state.totalCnt
+      });
+    }
+  
+    const reactJsPgChange = (pageNumber) => {
+      rowClickCancel();
+  
+      const requestHeaderParam = {
+        ...requestHeader,  // 기존 상태 복사
+        activePage: pageNumber,  // 새로운 activePage로 업데이트
+      };
+  
+      setRequestHeader({
+        ...requestHeader,
+        activePage: pageNumber
+      });
+  
+      const updatedRequestBody = {
+        catCd : selectedInfo.node.key
+        , catNm : selectedInfo.node.title
+        // , mgtNm : selectedInfo.node.title
+        // , dataType : selectDataType
+        // , mgtOrderSeq : inputMgtOrderSeq
 
+        // catSeq: selectedInfo.node.catSeq,
+        // catCd: selectedInfo.node.key,
+        // catNm: selectedInfo.node.title,
+        // upCatCd: selectedInfo.node.upCatCd || '',
+        // upCatNm: selectedInfo.node.upCatNm,
+        //od: selectedInfo.node.od,
+      };
+      getMgtList(requestHeaderParam, updatedRequestBody);
+      btnView('i');
+    };
+
+    const btnView = function (state){
+      switch(state){
+        case 'i' : 
+          setShowDelBtn(false);
+        break;
+        case 'u' :
+          setShowDelBtn(true);
+        break;
+        case 'r' :
+          setShowDelBtn(false);
+        break;
+      }
+    }
+
+    const cancel = function () {
+      stateSelectedClear();
+      stateClear();
+      inputClear();
+    }
+  
+    const onCancelBtnClick = function () {
+      // let requestHeaderParam = {
+      //   activePage: 1,
+      //   listSize: 0,
+      //   size: 10
+      // }
+      cancel();
+      reactJsPgClear();
+    }
+
+    const editCancel = function(){
+      inputClear();
+    }
+
+    const onSelectChange = function(e){
+      if(e.target.value == null){
+        setSelectDataType('');
+      } else{ 
+        setSelectDataType(e.target.value);
+      }
+    }
+
+    const validation = function (data) {
       if (data.catCd.length > MGT_MAX_LENGTH.catCd) {
         alert('카테고리 코드의 최대 글자 수를 '+ (data.catCd.length - MGT_MAX_LENGTH.catCd)+' 만큼 초과하였습니다. (최대 글자수 : '+MGT_MAX_LENGTH.catCd+' 자)');
         return false;
       }
-
       if (!mgtRegex.catCd.test(data.catCd)) {
         alert('카테고리 코드가 잘못 입력되었습니다.');
         return false;
       }
-
       if (data.catNm.length > MGT_MAX_LENGTH.catNm) {
         alert('카테고리명의 최대 글자 수를 '+ (data.catNm.length - MGT_MAX_LENGTH.catNm)+' 만큼 초과하였습니다. (최대 글자수 : '+MGT_MAX_LENGTH.catNm+' 자)');
         return false;
       }
-  
       if (!mgtRegex.catNm.test(data.catNm)) {
         alert('카테고리명이 잘못 입력되었습니다.');
         return false;
       }
-
       if (data.mgtNm.length > MGT_MAX_LENGTH.mgtNm) {
         alert('관리항목명의 최대 글자 수를 '+ (data.mgtNm.length - MGT_MAX_LENGTH.mgtNm)+' 만큼 초과하였습니다. (최대 글자수 : '+MGT_MAX_LENGTH.mgtNm+' 자)');
         return false;
       }
-
       if (!mgtRegex.mgtNm.test(data.mgtNm)) {
         alert('관리항목명이 잘못 입력되었습니다.');
         return false;
       }
-
       if (data.dataType.length > MGT_MAX_LENGTH.dataType) {
         alert('관리항목 형식의 최대 글자 수를 '+ (data.dataType.length - MGT_MAX_LENGTH.dataType)+' 만큼 초과하였습니다. (최대 글자수 : '+MGT_MAX_LENGTH.dataType+' 자)');
         return false;
       }
-
       if (!mgtRegex.dataType.test(data.dataType)) {
         alert('관리항목 형식이 잘못 선택되었습니다.');
         return false;
       }
-
       if (Number(data.mgtOrderSeq) < MGT_MAX_LENGTH.mgtOrderSeqMinSize || Number(data.mgtOrderSeq) > MGT_MAX_LENGTH.mgtOrderSeqMaxSize) {
         alert('항목순서의 범위는 '+ MGT_MAX_LENGTH.mgtOrderSeqMinSize +' ~ '+MGT_MAX_LENGTH.mgtOrderSeqMaxSize+' 입니다.');
         return false;
       }
-
       if (!mgtRegex.mgtOrderSeq.test(data.mgtOrderSeq)) {
         alert('항목순서가 잘못 입력되었습니다.');
         return false;
       }
-
       return true;
     }
 
-    const onTreeSelect = (selectedKeys, info) => {
-      setInputCatNm('');
-      setInputCatCd('');
-      requestBody.catNm = '';
-      requestBody.catCd = '';
-      inputClear();
-      stateClear();
+    const onTreeSelect = (selectedKeys, selectedInfo) => {
+      cancel();
+      let iParam = {};
+      let stateSetParam = {};
+      const requestHeaderParam = {
+        activePage: 1,
+        listSize: 0,
+        size: 10
+      };
       if(selectedKeys.length > 0){
-        setSelectedKeys(selectedKeys);
-        setSelectedInfo(info);
-        setInputCatNm(info.node.title);
-        setInputCatCd(selectedKeys[0]);
-        requestBody.catCd = selectedKeys[0];
-        requestBody.catNm = info.node.catNm;
-        getMgtList();
+        iParam = {
+          catCd : selectedKeys[0]
+          , catNm : selectedInfo.node.catNm
+          // , mgtNm : inputMgtNm
+          // , dataType : selectDataType
+          // , mgtOrderSeq : selectedInfo.node.inputMgtOrderSeq
+        }
+        
+        stateSetParam = {mgtSeq : selectedInfo.node.mgtSeq, selectedKeys : selectedKeys, selectedInfo : selectedInfo};
+        stateSet(stateSetParam);
+        inputSet(iParam);
+
+        getMgtList(requestHeaderParam, iParam);
         setFormDisabled(false);
       } else {
+        reactJsPgClear();
         setFormDisabled(true);
-      }
-      //페이지네이션 초기화
-      if(reactJsPgRef.current){
-        reactJsPgRef.current.updateActivePage();
       }
     };
     
     const onRowClick = function(selectedObj){
-      if(rowClickMgtSeq == selectedObj.mgtSeq){
-        setRowClickMgtSeq('');
-        inputClear();
-        setShowDelBtn(false);
-      } else {
-        if(!selectedObj.upCatCd){
-          selectedObj.upCatCd = '';
-        }
-        setRowClickMgtSeq(selectedObj.mgtSeq);
-        inputSet(selectedObj);
-        setShowDelBtn(true);
-      }
-    }
-    
-    const onCancleClick = function(){
-      setInputCatNm('');
-      setInputCatCd('');
-      requestBody.catNm = '';
-      requestBody.catCd = '';
-      stateClear();
-      inputClear();
-      setFormDisabled(true);
+      //u, i
+      editCancel();
+      let uParam = {};
+      let stateSetParam = {};
+      let btnViewState = '';
 
-      //페이지네이션 초기화
-      if(reactJsPgRef.current){
-        reactJsPgRef.current.updateActivePage();
+      if (rowClickMgtSeq != selectedObj.mgtSeq) {
+
+        btnViewState = 'u';
+
+        stateSetParam = {rowClickMgtSeq : selectedObj.mgtSeq, mgtSeq : selectedObj.mgtSeq};
+
+        stateSet(stateSetParam);
+        inputSet(selectedObj);
+      } else {
+        btnViewState = 'i';
+        rowClickCancel();
       }
+      btnView(btnViewState);
+    }
+
+    const rowClickCancel = function () {
+      //ti, i
+      const stateSetParam = {rowClickMgtSeq : '', mgtSeq : ''};
+      stateSet(stateSetParam);
+      inputClear();
     }
     
+
     return (
     <div className='root_box admin'>
       <div className='mgt'>
@@ -370,20 +517,20 @@ function MgtContainer( properties ){
             <div className='content_box cat_in'>
                 <div className='content_header'>관리항목 관리
                     <div className='button_box'>{/* className={showDelBtn ? 'button_box n3' : 'button_box n2'} */}
-                        <BoardButton type="cancel" color="white" onClick={onCancleClick} disabled={formDisabled}/>
-                        <BoardButton type="save" color="orange" onClick={saveMgt} disabled={formDisabled}/>
-                        <BoardButton type="delete" color="white" show={showDelBtn} onClick={deleteMgt} disabled={formDisabled}/>
+                        <BoardButton type="cancel" color="white" onClick={onCancelBtnClick} disabled={formDisabled}/>
+                        <BoardButton type="save" color="orange" onClick={onSaveBtnClick} disabled={formDisabled}/>
+                        <BoardButton type="delete" color="white" show={showDelBtn} onClick={onDeleteBtnClick} disabled={formDisabled}/>
                     </div>
                 </div>
                 <div className='input_container_box'>
                     <Input type = 'text' value={inputCatNm} onChange={(event)=>{setInputCatNm(event.target.value);}} label_str = '카테고리명' placeholder_str='카테고리명을 입력하세요.' disabled={true}/>
                     <Input type = 'text' value={inputCatCd} onChange={(event)=>{setInputCatCd(event.target.value);}} label_str = '코드' placeholder_str='코드를 입력하세요.' disabled={true}/>
-                    <Input type = 'hidden' value={mgtSeq} onChange={(event)=>{setMgtSeq(event.target.value);} } />
+                    {/* <Input type = 'hidden' value={mgtSeq} onChange={(event)=>{setMgtSeq(event.target.value);} } /> */}
                 </div>
                 <div className='input_container_box'>
                     <Input type = 'text' value={inputMgtNm} onChange={(event)=>{setInputMgtNm(event.target.value);}}  label_str = '관리항목명' placeholder_str='관리항목명을 입력하세요.' disabled={formDisabled}/>
                     <div className="input_container select"><span className='ol_dot'/><label>관리항목형식</label>
-                      <Select value={selectDataType} options = {dataTypeSelectOptions} onChange = {(event)=>{event.target.value == null ? setSelectDataType('') : setSelectDataType(event.target.value); }} disabled={formDisabled}/>
+                      <Select value={selectDataType} options = {dataTypeSelectOptions} onChange = {(e)=>{onSelectChange(e)}} disabled={formDisabled}/>
                     </div>
                 </div>
                 <div className='input_container_box'>
@@ -395,81 +542,17 @@ function MgtContainer( properties ){
                 
                 <BoardList type="DtAttach" placeholder_str='검색옵션 선택 후 검색어를 입력하세요.'  thead={[{key : 'mgtNm', value : '관리항목명'},{key : 'mappedDataType', value : '자료형식'}]} tbody={mgtList} onRowClick={onRowClick} selectedId={rowClickMgtSeq} />
                 <div className='pagenation_box'>
-                    <div className='label'>총 카운트 {reactJsPgListSize}</div>
+                    <div className='label'>총 카운트 {totalListSize}</div>
                     <div className={reactJsPgShow ? 'pg show' : 'pg hide'}>
-                      <ReactJsPg ref={reactJsPgRef} getList={getMgtList} requestHeader={requestHeader} requestBody={requestBody}/>
+                      <ReactJsPg reactJsPgChange={reactJsPgChange} requestHeader={requestHeader}/>
                     </div>
                 </div>
-                
             </div>
         </div>
         </div>
       </div>  
     </div>
-        
-    );
+  );
 }
 
 export default MgtContainer;
-
-class ReactJsPg extends React.Component {
-  constructor(props) {
-    super(props);
-
-    this.state = {
-      activePage: 1,
-      listSize : 0,
-      pageSize : 10
-    };
-  }
-
-  updateActivePage = () => {
-    this.setState({activePage : 1});
-  }
-
-  updateListSize = (newSize) => {
-    this.setState({listSize : newSize});
-  }
-
-  handlePageChange(pageNumber) {
-    console.log(`Active page is ${pageNumber}`);
-
-    //this.setState({activePage: pageNumber});
-
-    this.setState({ activePage: pageNumber }, () => {
-      if (this.props.getList) {
-        const updatedHeader = {
-          page: this.state.activePage  // 새로운 activePage로 업데이트
-          , size: this.state.pageSize    // 현재 페이지 크기를 사용
-        };
-  
-        // getList 호출 시 requestHeader를 함께 전달
-        this.props.getList(updatedHeader);
-      }
-    });
-  }
- 
-  render() {
-    return (
-      <ReactJsPagination
-          activePage={this.state.activePage}//Required
-          totalItemsCount={this.state.listSize}//Required
-          onChange={this.handlePageChange.bind(this)}//Required
-          itemsCountPerPage={this.state.pageSize}
-          pageRangeDisplayed={5}
-          innerClass='pagination'//ul className
-          itemClass='n5'//li className
-          activeClass='active'//li active className
-          activeLinkClass=''//a active className
-          itemClassFirst='last_item'//<< className
-          itemClassPrev='prev_item'//< className
-          itemClassNext='next_item'//> className
-          itemClassLast='last_item'//>> className
-          //test중. 리스트 페이지 2개 이상일 시엔 보이는지?
-          hideDisabled={false}
-          //hideNavigation={true}
-      />
-    );
-  }
-}
-
