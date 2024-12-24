@@ -1,3 +1,16 @@
+// MgtContainer.js
+//
+// VIEW: /mgt, 관리항목 관리
+// TODO: 
+// FIXME: 유효성 변경 시 필요에 맞게 mgtRegex(serviceRegex) 수정 필요.
+// HACK: 
+// NOTE: 
+// REFACTOR: 비동기 함수를 실행할 때 iParam, uParam 등을 사용하는 로직이므로, 이후 리팩토링 필요 
+// IMPORTANT: 
+// INDT: 2024.12.24
+// INID: MJK
+
+
 import React, {useEffect, useState, useRef} from 'react'; 
 import { useForm } from 'react-hook-form';
 import axios from 'axios';
@@ -10,10 +23,8 @@ import Input from '../board/FormInput';
 import BoardList from '../board/BoardList';
 import Select from './../board/FormSelect'
 import BoardButton from './../board/BoardButton';
-import SearchBox from "./../board/SearchBox";
 
 import CategoryListTree from './CategoryListTree';
-import ReactJsPagination from "react-js-pagination";
 import ReactJsPg from './ReactJsPg';
 
 import './../assets/css/app.css';
@@ -50,7 +61,6 @@ function MgtContainer( properties ){
     
     const [formDisabled, setFormDisabled] = useState(true);
 
-    const reactJsPgRef = useRef(null);
     const [reactJsPgShow, setReactJsPgShow] = useState(false);
     const [totalListSize, setReactJsPgListSize] = useState(0);
 
@@ -123,7 +133,6 @@ function MgtContainer( properties ){
 
           setMgtList(response.data);
           reactJsPgSet({...rqHeader, totalCnt:totalCnt, show:true});
-          //setReactJsPgShow(true);
         } else {
 
         }
@@ -151,22 +160,14 @@ function MgtContainer( properties ){
           } else {
             rqBody.inId = userId;
             response = (await axios.post(`${apiBaseUrl}/category_mgt/post`, rqBody, {params:rqHeader}));
-            //rqBody.mgtSeq = response.data.mgtSeq;
           }
-
-          //getMgtList({});
-          //onRowClick(rqBody);
           
           alert("관리항목 업데이트 완료");
         } catch (error) {
           response = error;
           alert("관리항목 업데이트 실패");
         } finally {
-          // delete rqBody.inId;
-          // delete requestBody.chgId;
-          // delete rqBody.chgId;
           onCancelBtnClick();
-          //onCancleClick();
           properties.setLoadYn(false);
           return response;
         }
@@ -196,21 +197,13 @@ function MgtContainer( properties ){
         try {
           if (!properties.loadYn){properties.setLoadYn(true);}
           response = (await axios.put(`${apiBaseUrl}/category_mgt/delete`, rqBody, {params:rqHeader}));
-          // setMgtSeq('');
-          // setInputMgtNm('');
-          // setSelectDataType('');
-          // setInputMgtOrderSeq('');
 
           alert("관리항목 삭제 완료");
         } catch (error) {
           response = error;
           alert("관리항목 삭제 실패");
         } finally {
-          // delete requestBody.chgId;
-          // delete rqBody.chgId;
           onCancelBtnClick();
-          //onCancleClick();
-          //getMgtList(requestHeaderParam, {});
 
           properties.setLoadYn(false);
           return response;
@@ -231,15 +224,6 @@ function MgtContainer( properties ){
           , mgtOrderSeq : inputMgtOrderSeq
         };
       } 
-      // else {
-      //   uParam = {
-      //     catSeq : selectedInfo.node.catSeq 
-      //     , catCd : selectedKeys[0]
-      //     , catNm : selectedInfo.node.title
-      //     , upCatCd : selectedInfo.node.upCatCd
-      //     , upCatNm : selectedInfo.node.upCatNm
-      //   };
-      // }
       deleteMgt(requestHeader, uParam);
     }
           
@@ -255,12 +239,6 @@ function MgtContainer( properties ){
       setMgtList([]);
       btnView('r');
       setFormDisabled(true);
-      // setReactJsPgListSize(0);
-      // setReactJsPgShow(false);
-          
-      // if(reactJsPgRef.current){
-      //   reactJsPgRef.current.updateListSize(0);
-      // }
     }
     
     const stateSet = (state) => {
@@ -278,8 +256,7 @@ function MgtContainer( properties ){
       }
     }
 
-    const inputClear = function(){//우선 전체 초기화라고 가정. 취소 버튼 시 동작만 있음.
-      //setMgtSeq('');
+    const inputClear = function(){
       setInputCatCd('');
       setInputCatNm('');
       setInputMgtNm('');
@@ -331,8 +308,8 @@ function MgtContainer( properties ){
       rowClickCancel();
   
       const requestHeaderParam = {
-        ...requestHeader,  // 기존 상태 복사
-        activePage: pageNumber,  // 새로운 activePage로 업데이트
+        ...requestHeader, 
+        activePage: pageNumber,
       };
   
       setRequestHeader({
@@ -343,16 +320,6 @@ function MgtContainer( properties ){
       const updatedRequestBody = {
         catCd : selectedInfo.node.key
         , catNm : selectedInfo.node.title
-        // , mgtNm : selectedInfo.node.title
-        // , dataType : selectDataType
-        // , mgtOrderSeq : inputMgtOrderSeq
-
-        // catSeq: selectedInfo.node.catSeq,
-        // catCd: selectedInfo.node.key,
-        // catNm: selectedInfo.node.title,
-        // upCatCd: selectedInfo.node.upCatCd || '',
-        // upCatNm: selectedInfo.node.upCatNm,
-        //od: selectedInfo.node.od,
       };
       getMgtList(requestHeaderParam, updatedRequestBody);
       btnView('i');
@@ -379,11 +346,6 @@ function MgtContainer( properties ){
     }
   
     const onCancelBtnClick = function () {
-      // let requestHeaderParam = {
-      //   activePage: 1,
-      //   listSize: 0,
-      //   size: 10
-      // }
       cancel();
       reactJsPgClear();
     }
@@ -456,7 +418,7 @@ function MgtContainer( properties ){
       if(selectedKeys.length > 0){
         iParam = {
           catCd : selectedKeys[0]
-          , catNm : selectedInfo.node.catNm
+          , catNm : selectedInfo.node.title
           // , mgtNm : inputMgtNm
           // , dataType : selectDataType
           // , mgtOrderSeq : selectedInfo.node.inputMgtOrderSeq
@@ -525,7 +487,6 @@ function MgtContainer( properties ){
                 <div className='input_container_box'>
                     <Input type = 'text' value={inputCatNm} onChange={(event)=>{setInputCatNm(event.target.value);}} label_str = '카테고리명' placeholder_str='카테고리명을 입력하세요.' disabled={true}/>
                     <Input type = 'text' value={inputCatCd} onChange={(event)=>{setInputCatCd(event.target.value);}} label_str = '코드' placeholder_str='코드를 입력하세요.' disabled={true}/>
-                    {/* <Input type = 'hidden' value={mgtSeq} onChange={(event)=>{setMgtSeq(event.target.value);} } /> */}
                 </div>
                 <div className='input_container_box'>
                     <Input type = 'text' value={inputMgtNm} onChange={(event)=>{setInputMgtNm(event.target.value);}}  label_str = '관리항목명' placeholder_str='관리항목명을 입력하세요.' disabled={formDisabled}/>
