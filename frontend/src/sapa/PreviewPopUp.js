@@ -1,21 +1,28 @@
+// PreviewPopUp.js
+//
+// VIEW: /dt/sapa/attach/preview, 인쇄 미리보기
+// TODO: 현재는 A4 기준으로만 만들어져 있음. 요구사항 변경 시 추가 개발 필요.
+// FIXME: 
+// HACK: 
+// NOTE: 
+// REFACTOR:  
+// IMPORTANT: 
+// INDT: 2024.12.24
+// INID: MJK
+
 import React, {useEffect, useState} from 'react';
-import BoardList from '../board/BoardList';
-import SearchBox from "../board/SearchBox";
-import icon_x_white from './../assets/images/icon_x_white.svg';
 import { CategoryContext, useCategoryContext } from '../CategoryContexts';
 import axios from 'axios';
 
 function PreviewPopUp (properties) {
     const apiBaseUrl = process.env.REACT_APP_API_BASE_URL;
+    const urlParams = new URLSearchParams(window.location.search);
     
-    const [attachFileList, setAttachFileList] = useState([]);
     const { cleanParam } = useCategoryContext();
     const [ChildCategoryList, setChildCategoryList] = useState([]);
-    const [selectSearchKey, setSelectSearchKey] = useState('');//select
-    const [inputSearchStr, setInputSearchStr] = useState('');//text
-    const [reactJsPgListSize, setReactJsPgListSize] = useState(0);
  
     const getChildCategoryAttachList = async () => {
+        const requestHeader = JSON.parse(urlParams.get('requestHeader'));
         const rqHeader = cleanParam(requestHeader);
         let requestBody = {};
 
@@ -36,7 +43,7 @@ function PreviewPopUp (properties) {
             response = await axios.post(`${apiBaseUrl}/attachment/getChildCategoryAttachList`, requestBody, {params : rqHeader});
             
             if(response.data != null && response.data != ''){
-                setReactJsPgListSize(response.data[0].totalCnt);
+                //setReactJsPgListSize(response.data[0].totalCnt);
             } else {
                 alert('관리중인 출력대상 증빙자료가 없습니다.');
             }
@@ -51,20 +58,8 @@ function PreviewPopUp (properties) {
     };
     
     useEffect(() => {
-        //getAttachFilePathList();
         getChildCategoryAttachList();
     }, []);
-
-
-    const urlParams = new URLSearchParams(window.location.search);
-
-    const requestHeader = JSON.parse(urlParams.get('requestHeader'));
-
-    const requestBody = {
-        attachSeqList : ''
-    }
-
-    const selectOptions = [{key : 'catNm', value : '카테고리 이름'}, {key : 'catCd', value : '카테고리 코드'}];
 
     return(
         
