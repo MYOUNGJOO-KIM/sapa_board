@@ -2,14 +2,6 @@ import React from 'react';
 import ReactJsPagination from "react-js-pagination";
 
 class ReactJsPg extends React.Component {
-  
-    // updateActivePage = (newActivePage) => {
-    //   this.setState({activePage : newActivePage});
-    // }
-  
-    // updateListSize = (newSize) => {
-    //   this.setState({listSize : newSize});
-    // }
     
     handlePageChange(pageNumber) {
       this.props.reactJsPgChange(pageNumber);
