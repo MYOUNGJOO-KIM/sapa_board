@@ -1,4 +1,17 @@
-import React, {useEffect, useRef, useState} from 'react'; 
+// Container.js
+//
+// VIEW: /category, 카테고리 설정정
+// TODO: 
+// FIXME: 유효성 변경 시 필요에 맞게 categoryRegex(serviceRegex) 추가 필요.
+// HACK: 
+// NOTE: 
+// REFACTOR1: 비동기 함수를 실행할 때 iParam, uParam 등을 사용하는 로직이므로, 이후 리팩토링 필요 
+// REFACTOR2: 
+// IMPORTANT: 
+// INDT: 2024.12.24
+// INID: MJK
+
+import React, {useEffect, useState, useRef} from 'react'; 
 import { useForm } from 'react-hook-form';
 import axios from 'axios';
 
@@ -11,7 +24,6 @@ import Input from '../board/FormInput';
 import BoardList from '../board/BoardList';
 import Select from './../board/FormSelect'
 import BoardButton from './../board/BoardButton';
-import ReactJsPagination from "react-js-pagination";
 import SearchBox from "./../board/SearchBox";
 
 import CategoryListTree from './CategoryListTree';
@@ -51,9 +63,9 @@ function Container( properties ){
   const [inputCatNm, setInputCatNm] = useState('');
   const [inputUpCatCd, setInputUpCatCd] = useState('');
   const [inputUpCatNm, setInputUpCatNm] = useState('');
-  const [inputPrintYn, setInputPrintYn] = useState('y');//false
-  const [inputMgtYn, setInputMgtYn] = useState('y');//false
-  const [od, setOd] = useState('');
+  const [inputPrintYn, setInputPrintYn] = useState('y');
+  const [inputMgtYn, setInputMgtYn] = useState('y');
+  //const [od, setOd] = useState('');
 
   const [selectSearchKey, setSelectSearchKey] = useState('');//select
   const [inputSearchStr, setInputSearchStr] = useState('');//text
@@ -163,7 +175,7 @@ function Container( properties ){
 
   const saveCategory = async (requestHeaderParam, requestBody) => {
     if(validation(requestBody)){
-      requestBody.chgId = userId;//테스트 때문에
+      requestBody.chgId = userId;
 
       const rqHeader = cleanParam(requestHeaderParam);
       const rqBody = cleanParam(requestBody);
@@ -181,7 +193,7 @@ function Container( properties ){
         alert("카테고리 업데이트 완료");
       } catch (error) {
         response = error;
-        alert("카테고리 업데이트 실패\n"+response.response.data.message);
+        alert("카테고리 업데이트 실패");//+response.response.data.message 보안문제
       } finally {
 
         cancel();
@@ -204,14 +216,15 @@ function Container( properties ){
       , upCatNm : inputUpCatNm
       , printYn : inputPrintYn
       , mgtYn : inputMgtYn
-      , od : od
+      //, od : od
     };
     saveCategory(requestHeader, uParam);
   }
 
   const deleteCategory = async (requestHeaderParam, requestBody) => {
     if(validation(requestBody)){
-      requestBody.chgId = userId;//테스트 때문에
+      requestBody.chgId = userId;
+
       const rqHeader = cleanParam(requestHeaderParam);
       const rqBody = cleanParam(requestBody);
   
@@ -222,9 +235,8 @@ function Container( properties ){
         alert("카테고리 삭제 완료");
       } catch (error) {
         response = error;
-        alert("카테고리 삭제 실패\n"+response.response.data.message);
+        alert("카테고리 삭제 실패\n");//+response.response.data.message 보안상 사유
       } finally {
-
         cancel();
         getCategoryListTreeList();
         getParentCategoryList({},{});
@@ -266,7 +278,7 @@ function Container( properties ){
 
   const stateClear = function (){
     setCatSeq('');
-    setOd('');
+    //setOd('');
     setRowClickCatCd('');
     setRowClickCatSeq('');
     btnView('i');
@@ -277,9 +289,9 @@ function Container( properties ){
     if (state.catSeq || state.catSeq == '') {
       setCatSeq(state.catSeq);
      }
-    if (state.od || state.od == '') {
-      setOd(state.od);
-    }
+    // if (state.od || state.od == '') {
+    //   setOd(state.od);
+    // }
     if (state.selectedKeys || state.selectedKeys == '') {
       setSelectedKeys(state.selectedKeys);
     }
@@ -366,7 +378,7 @@ function Container( properties ){
         catNm: selectedInfo.node.title,
         upCatCd: selectedInfo.node.upCatCd || '',
         upCatNm: selectedInfo.node.upCatNm,
-        od: selectedInfo.node.od,
+        //od: selectedInfo.node.od,
       };
       getChildCategoryList(requestHeaderParam, updatedRequestBody);
       btnView('ti');
@@ -421,7 +433,7 @@ function Container( properties ){
         , catCd : selectedKeys[0] 
         , upCatCd : selectedInfo.node.upCatCd 
         , upCatNm : selectedInfo.node.upCatNm 
-        , od : selectedInfo.node.od
+        //, od : selectedInfo.node.od
       }
     }
     getChildCategoryList(requestHeaderParam, iParam);
@@ -474,7 +486,7 @@ function Container( properties ){
       , upCatNm : selectedInfo.node.upCatNm 
       , printYn : selectedInfo.node.printYn
       , mgtYn : selectedInfo.node.mgtYn  
-      , od : selectedInfo.node.od 
+      //, od : selectedInfo.node.od 
     }
     btnViewState = selectedKeys.length > 0 ? 'tu' : 'u';
 
@@ -512,7 +524,7 @@ function Container( properties ){
       }
       btnView('i');
     }
-    stateSetParam = {rowClickCatCd : '', rowClickCatSeq : '', catSeq : '', od:''};
+    stateSetParam = {rowClickCatCd : '', rowClickCatSeq : '', catSeq : ''};
     stateSet(stateSetParam);
     inputSet({...iParam, ...stateSetParam});
   }
@@ -569,7 +581,7 @@ function Container( properties ){
         , upCatNm : selectedInfo.node.upCatNm  
         // , printYn : selectedInfo.node.printYn //조회 이거 영향받음
         // , mgtYn : selectedInfo.node.mgtYn    //조회 이거 영향받음
-        , od : selectedInfo.node.od 
+        //, od : selectedInfo.node.od 
       }
       stateSetParam = {...iParam, selectedKeys : selectedKeys, selectedInfo : selectedInfo};
       stateSet(stateSetParam);
@@ -596,13 +608,13 @@ function Container( properties ){
 
       btnViewState = selectedKeys.length > 0 ? 'tu' : 'u';
       
-      stateSetParam = {rowClickCatCd : selectedObj.catCd, rowClickCatSeq : selectedObj.catSeq, catSeq : selectedObj.catSeq, od : selectedObj.od};
+      stateSetParam = {rowClickCatCd : selectedObj.catCd, rowClickCatSeq : selectedObj.catSeq, catSeq : selectedObj.catSeq};
       
       stateSet(stateSetParam);
       inputSet(selectedObj);
     } else {//clear
 
-      if(selectedKeys.length > 0){//트리선택
+      if(selectedKeys.length > 0){
         btnViewState = 'ti';
         uParam = {
           upCatCd : selectedKeys[0]
@@ -610,7 +622,7 @@ function Container( properties ){
           , printYn : selectedInfo.node.printYn
           , mgtYn : selectedInfo.node.mgtYn
         }
-        stateSetParam = {rowClickCatCd : '', rowClickCatSeq : '', catSeq : '', od : ''};
+        stateSetParam = {rowClickCatCd : '', rowClickCatSeq : '', catSeq : ''};
         
         stateSet(stateSetParam);
         inputSet({...uParam, ...stateSetParam});
@@ -624,7 +636,7 @@ function Container( properties ){
 
   const rowClickCancel = function () {
     //ti, i
-    const stateSetParam = {rowClickCatCd : '', rowClickCatSeq : '', catSeq : '', od : ''};
+    const stateSetParam = {rowClickCatCd : '', rowClickCatSeq : '', catSeq : ''};
     stateSet(stateSetParam);
     inputClear();
   }
