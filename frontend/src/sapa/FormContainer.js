@@ -1,24 +1,27 @@
-import React, {useEffect, useState, useRef, useReducer, useCallback } from 'react'; 
-import styled from 'styled-components';
-import './../assets/css/app.css';
-import './../assets/css/form_container.css';
-import Input from '../board/FormInput';
-import BoardButton from './../board/BoardButton';
+import React, {useEffect, useState, useRef } from 'react'; 
 import axios from 'axios';
-import icon_search from './../assets/images/icon_search.png';
-import Select from './../board/FormSelect'
-import { useDropzone } from 'react-dropzone';
-import Header from './Header';
-import CategoryListTree from './CategoryListTree';
 import { format } from "date-fns";
-import CategoryListModal from './CategoryListModal';
-import { CategoryContext, useCategoryContext } from '../CategoryContexts';
-import DatePicker from 'react-datepicker';
-import 'react-datepicker/dist/react-datepicker.css'; 
 import { ko } from 'date-fns/locale';
+import { useDropzone } from 'react-dropzone';
+
+import { CategoryContext, useCategoryContext } from '../CategoryContexts';
 import { dataRegex, dataMgtRegex } from './../utils/serviceRegex';
 import { DATA_MAX_LENGTH, DATA_MGT_MAX_LENGTH } from './../utils/serviceMaxLength';
 import { datePattern01, datePattern02, datePattern03, datePattern04 } from './../utils/patterns';
+import Header from './Header';
+import Input from '../board/FormInput';
+import Select from './../board/FormSelect'
+import BoardButton from './../board/BoardButton';
+
+import CategoryListTree from './CategoryListTree';
+import CategoryListModal from './CategoryListModal';
+import DatePicker from 'react-datepicker';
+
+import 'react-datepicker/dist/react-datepicker.css'; 
+import './../assets/css/app.css';
+import './../assets/css/form_container.css';
+import icon_search from './../assets/images/icon_search.png';
+
 
 
 function FormContainer( properties ) {
@@ -26,45 +29,39 @@ function FormContainer( properties ) {
     const urlParams = new URLSearchParams(window.location.search);
     const userId = urlParams.get('userId') || "anonymous";
     
-    const [isModalOpen, setIsModalOpen] = useState(false);
-
     const { cleanParam } = useCategoryContext();
-
+    const [categoryListTreeList, setCategoryListTreeList] = useState([]);
+    const [prfData, setPrfData] = useState('');
     const treeRef = useRef();
+
+    const [isTreeOpen, setIsTreeOpen] = useState(true);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isMgtVisible, setIsMgtVisible] = useState(false);
+    const [formDisabled, setFormDisabled] = useState(true);
+    const [treeMgtYn, setTreeMgtYn] = useState('');
+    
     const [selectedKeys, setSelectedKeys] = useState([]);
     const [selectedInfo, setSelectedInfo] = useState(null);
 
-    const [categoryListTreeList, setCategoryListTreeList] = useState([]);
-
-    const [catCd, setCatCd] = useState('');
     const [catSeq, setCatSeq] = useState('');
+    const [catCd, setCatCd] = useState('');
     const [inputCatNm, setInputCatNm] = useState('');
-
     /* 수정 로직 추가 시 const [inputPrfSeq, setInputPrfSeq] = useState(''); */
     const [inputPrfNm, setInputPrfNm] = useState('');
     const [inputPrfDesc, setInputPrfDesc] = useState('');
     const [inputOcrTextOutput, setInputOcrTextOutput] = useState('');
     const [isLoading, setLoading] = useState(false);
-
     const [fileList, setFileList] = useState([]);
     const [mgtList, setMgtList] = useState([]);
+    const [dynamicInputVal, setDynamicInputVal] = useState({});
+    const [dynamicInputValStr, setDynamicInputValStr] = useState({});
 
     const [selectSearchKey, setSelectSearchKey] = useState('');
     const [inputSearchStr, setInputSearchStr] = useState('');
 
-    const [prfData, setPrfData] = useState('');
 
-    const [isMgtVisible, setIsMgtVisible] = useState(false);
-    
-    const [dynamicInputVal, setDynamicInputVal] = useState({});
-    const [dynamicInputValStr, setDynamicInputValStr] = useState({});
-    
-    const [formDisabled, setFormDisabled] = useState(true);
-    const [treeMgtYn, setTreeMgtYn] = useState('');
 
-    const [isTreeOpen, setIsTreeOpen] = useState(true);
-
-    const getCategoryListTreeList = async ( ) => {
+    const getCategoryListTreeList = async () => {
         let response;
         try {
             if (!properties.loadYn){properties.setLoadYn(true);}
@@ -196,7 +193,6 @@ function FormContainer( properties ) {
     }
 
     const savePrfData = async ( ) => {
-
         const formData = new FormData();
         let dynamicInputValFormatStrArr = [];
 
@@ -270,29 +266,14 @@ function FormContainer( properties ) {
         setIsModalOpen(false);
     };
 
-    const setInput = function (prfData, prfAttach){
-        /* 수정 로직 추가 시 setInputPrfSeq(prfData.inputPrfSeq); */
-        setInputPrfNm(prfData.prfNm);
-        setInputPrfDesc(prfData.prfDesc);
-        setFileList(prfAttach.fileList);
-        setMgtList(prfAttach.mgtList);
-    
-        requestBody.prfSeq = prfData.prfSeq;
-        requestBody.prfNm = prfData.prfNm;
-        requestBody.prfDesc = prfData.prfDesc;
-        requestHeader.fileList = prfAttach.fileList;
-        // requestBody.mgtList = prfAttach.mgtList;
-    }
-
     const stateClear = function(){
+        setPrfData('');
         setSelectedKeys([]);
         setSelectedInfo(null);
-        setCatCd('');
         setCatSeq('');
-        setPrfData('');
-
-        requestBody.catCd = '';
+        setCatCd('');
         requestBody.catSeq = '';
+        requestBody.catCd = '';
     }
 
     const inputClear = function(){
@@ -304,14 +285,44 @@ function FormContainer( properties ) {
         setMgtList([]);
         setDynamicInputVal({});
         setDynamicInputValStr({});
-    
         //requestBody.prfSeq = '';
         requestBody.catNm = '';
         requestBody.prfNm = '';
         requestBody.prfDesc = '';
         requestHeader.fileList = [];
         //requestBody.mgtList = [];
+    }
 
+    const stateSet = function (selectedObj, selectedInfo){
+        if (selectedObj.catCd || selectedObj.catCd == '') {
+            setSelectedKeys([selectedObj.catCd]);
+            setCatCd(selectedObj.catCd);
+            requestBody.catCd = selectedObj.catCd;
+        }
+        if (selectedInfo) {
+            setSelectedInfo(selectedInfo);
+        }
+        if (selectedObj.catSeq || selectedObj.catSeq == '') {
+            setCatSeq(selectedObj.catSeq);
+            requestBody.catSeq = selectedObj.catSeq;
+        }
+    }
+
+    const inputSet = function (category){
+        if (category.catNm || category.catNm == '') {
+            setInputCatNm(category.catNm);
+            requestBody.catNm = category.catNm;
+        }
+        // setSelectedKeys([selectedObj.catCd]);
+        // setSelectedInfo(info);
+        //setInputCatNm(selectedObj.catNm);
+        //setCatCd(selectedObj.catCd);
+        //setCatSeq(selectedObj.catSeq);
+        //requestBody.catSeq = selectedObj.catSeq;
+        //requestBody.catCd = selectedObj.catCd;
+        //requestBody.catNm = selectedObj.catNm;
+        // setFormDisabled(false);
+        // getPrfData();
     }
 
     const searchReset = function(e){
@@ -321,13 +332,72 @@ function FormContainer( properties ) {
         setInputSearchStr('');
     }
 
+    const onTreeSelect = (selectedKeys, info, d,e,f) => {
+        onCancelClick();
+        if(selectedKeys.length > 0){
+            stateSet({catSeq : info.node.catSeq, catCd : info.node.key}, info);
+            inputSet({catNm : info.node.title});
+            // setSelectedKeys(selectedKeys);
+            // setSelectedInfo(info);
+            // setInputCatNm(info.node.title);
+            // setCatCd(selectedKeys[0]);
+            // setCatSeq(info.node.catSeq);
+            // requestBody.catSeq = info.node.catSeq;
+            // requestBody.catCd = selectedKeys[0];
+            // requestBody.catNm = info.node.catNm;
+            setFormDisabled(false);
+            getPrfData();
+        } 
+    };
+
+    function onRowClick(selectedObj, info) {
+        onCancelClick();
+        stateSet(selectedObj, info);
+        inputSet(selectedObj);
+        setFormDisabled(false);
+        getPrfData();
+        if(selectedKeys.length > 0){
+        }
+          
+        return handleCloseModal();
+    }
+
     const onCancelClick = function () {
+        setIsMgtVisible(false);
+        setFormDisabled(true);
         stateClear();
         searchReset();
-        setIsMgtVisible(false);
         inputClear();
-        setFormDisabled(true);
     }
+
+    const datepickerOnchange = function (inputKey, date) {
+        let inputData = '';
+        let DateStr = '';
+
+        if (date instanceof Date) {
+            inputData = date;
+            DateStr = new Date(date.getTime()-(date.getTimezoneOffset() * 60000)).toISOString();
+        } else {
+            inputData = date.target.value;
+            DateStr = inputData;
+        }
+        setDynamicInputVal(prevObject => ({ ...prevObject, [inputKey] : inputData}));
+        setDynamicInputValStr(prevObject => ({ ...prevObject, [inputKey+'_str'] : DateStr}));
+        
+    }
+
+    const initDynamicInputVal = function (prevObject, inputKey) {
+        return {
+            ...prevObject,
+            [inputKey]: ''
+        };
+    };
+
+    const inputSearchStrOnKeyUp = function(e){
+        if(e.key == 'Enter'){
+            setIsModalOpen(true);
+        }
+      }
 
     const validation = function (header, body, dynamicInputValFormatStrArr) {
 
@@ -397,64 +467,6 @@ function FormContainer( properties ) {
         }
         return true;
     }
-
-    const onTreeSelect = (selectedKeys, info, d,e,f) => {
-        onCancelClick();
-        if(selectedKeys.length > 0){
-            setSelectedKeys(selectedKeys);
-            setSelectedInfo(info);
-            setInputCatNm(info.node.title);
-            setCatCd(selectedKeys[0]);
-            setCatSeq(info.node.catSeq);
-            requestBody.catSeq = info.node.catSeq;
-            requestBody.catCd = selectedKeys[0];
-            requestBody.catNm = info.node.catNm;
-            setFormDisabled(false);
-            getPrfData();
-        } 
-    };
-
-    function onRowClick(selectedObj, info) {
-        //inputClear();
-        onCancelClick();
-
-        setSelectedKeys([selectedObj.catCd]);
-        setSelectedInfo(info);
-        setInputCatNm(selectedObj.catNm);
-        setCatCd(selectedObj.catCd);
-        setCatSeq(selectedObj.catSeq);
-        requestBody.catSeq = selectedObj.catSeq;
-        requestBody.catCd = selectedObj.catCd;
-        requestBody.catNm = selectedObj.catNm;
-        setFormDisabled(false);
-        //setIsMgtVisible(false);
-        getPrfData();
-          
-        return handleCloseModal();
-    }
-
-    const datepickerOnchange = function (inputKey, date) {
-        let inputData = '';
-        let DateStr = '';
-
-        if (date instanceof Date) {
-            inputData = date;
-            DateStr = new Date(date.getTime()-(date.getTimezoneOffset() * 60000)).toISOString();
-        } else {
-            inputData = date.target.value;
-            DateStr = inputData;
-        }
-        setDynamicInputVal(prevObject => ({ ...prevObject, [inputKey] : inputData}));
-        setDynamicInputValStr(prevObject => ({ ...prevObject, [inputKey+'_str'] : DateStr}));
-        
-    }
-
-    const initDynamicInputVal = function (prevObject, inputKey) {
-        return {
-            ...prevObject,
-            [inputKey]: ''
-        };
-    };
     
 
     const mkElements = function (mgt, i) {
@@ -490,7 +502,7 @@ function FormContainer( properties ) {
                             <div className='search_box'>
                                 <Select options = {selectOptions} placeholder_str='검색옵션 선택 후 검색어를 입력하세요.' onChange={(event)=>{setSelectSearchKey(event.target.value);}} value={selectSearchKey}/>
                                 <div className="input_container text">
-                                    <input type="text" placeholder='검색옵션 선택 후 검색어를 입력하세요.' onChange={(event)=>{setInputSearchStr(event.target.value);}} value={inputSearchStr}></input>
+                                    <input type="text" placeholder='검색옵션 선택 후 검색어를 입력하세요.' onChange={(event)=>{setInputSearchStr(event.target.value);}} onKeyUp={(event)=>{inputSearchStrOnKeyUp(event);}} value={inputSearchStr}></input>
                                     <div className='button_box n2 reset'>
                                         <button className='get' onClick={() => {setIsModalOpen(true);}}><img src={(icon_search)}/>검색</button>
                                         <BoardButton type="reset" onClick={searchReset}/>
