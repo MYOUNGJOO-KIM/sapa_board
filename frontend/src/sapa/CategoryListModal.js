@@ -9,20 +9,19 @@ import ReactJsPg from './ReactJsPg';
 
 
 function CategoryListModal (properties) {
-  const [reactJsPgListSize, setReactJsPgListSize] = useState(0);
 
   const apiBaseUrl = process.env.REACT_APP_API_BASE_URL;
+  const [isRequestHeaderUpdated, setIsRequestHeaderUpdated] = useState(false);
+  
   const { cleanParam } = useCategoryContext();
   const [ChildCategoryList, setChildCategoryList] = useState([]);
-  // const [selectSearchKey, setSelectSearchKey] = useState('');//select
-  // const [inputSearchStr, setInputSearchStr] = useState('');//text
-  const [isRequestHeaderUpdated, setIsRequestHeaderUpdated] = useState(false);
-  const [reactJsPgShow, setReactJsPgShow] = useState(false);
-  //const [isModalOpen, setIsModalOpen] = useState(false);
-
+  
   const [selectSearchKey, setSelectSearchKey] = useState('');//select
   const [inputSearchStr, setInputSearchStr] = useState('');//text
-
+  
+  const [totalListSize, setReactJsPgListSize] = useState(0);
+  
+  const [reactJsPgShow, setReactJsPgShow] = useState(false);
   const [requestHeader, setRequestHeader] = useState({
     activePage: 1
     , listSize: 0
@@ -36,7 +35,7 @@ function CategoryListModal (properties) {
     , {key : 'catNm', value : '카테고리 이름'}
   ];
 
-  const thead=[{key : 'catCd', value : '카테고리 코드'},{key : 'catNm', value : '카테고리 이름'}] ;
+  //const thead=[{key : 'catCd', value : '카테고리 코드'},{key : 'catNm', value : '카테고리 이름'}] ;
   
   const getChildCategoryList = async (requestHeaderParam, requestBody) => {
 
@@ -54,12 +53,11 @@ function CategoryListModal (properties) {
 
       if(response.data != null && response.data != ''){
         totalCnt = response.data[0].totalCnt;
-        //setReactJsPgListSize(response.data[0].totalCnt);
         setChildCategoryList(response.data);
         reactJsPgSet({...rqHeader, totalCnt:totalCnt, show:true});
 
       } else {
-        setChildCategoryList([]);
+        stateClear();
       }
         
     } catch (error) {
@@ -81,11 +79,10 @@ function CategoryListModal (properties) {
 
   useEffect(() => {
     if(isRequestHeaderUpdated){
-      search({searchKey : properties.searchKey, searchStr : properties.searchStr});
+      search();
       setIsRequestHeaderUpdated(false);
     }
   }, [setSelectSearchKey, setInputSearchStr, isRequestHeaderUpdated]);
-
 
   if (!properties.isOpen) return null;
 
@@ -94,20 +91,15 @@ function CategoryListModal (properties) {
     setChildCategoryList([]);
   }
 
-  const stateSet = (state) => {
-  }
-
-  const inputClear = function(){
-  }
-
   const reactJsPgClear = function (state) {
     setReactJsPgListSize(0);
     setReactJsPgShow(false);
 
     setRequestHeader({
       ...requestHeader,
-      activePage : 1,
-      listSize : 0
+      activePage: 1,
+      listSize: 0,
+      size: 10
     });
   }
 
@@ -123,30 +115,29 @@ function CategoryListModal (properties) {
   }
 
   const reactJsPgChange = (pageNumber) => {
-    rowClickCancel();
+    //rowClickCancel();
 
     const requestHeaderParam = {
-      ...requestHeader,  // 기존 상태 복사
-      activePage: pageNumber,  // 새로운 activePage로 업데이트
+      ...requestHeader, 
+      searchKey: selectSearchKey,
+      searchStr: inputSearchStr,
+      activePage: pageNumber
     };
 
     setRequestHeader({
-      ...requestHeader,
-      activePage: pageNumber
+      ...requestHeaderParam
     });
 
     getChildCategoryList(requestHeaderParam, {});
   };
 
-  const search = function(e){
-    
-
+  const search = function(){
     let requestHeaderParam = {
+      searchKey: selectSearchKey,
+      searchStr: inputSearchStr,
       activePage: 1,
       listSize: 0,
-      size: 10,
-      searchKey: selectSearchKey,
-      searchStr: inputSearchStr
+      size: 10
     };
     getChildCategoryList(requestHeaderParam, {});
   }
@@ -154,10 +145,13 @@ function CategoryListModal (properties) {
   const searchReset = function(e){
     setSelectSearchKey(''); 
     setInputSearchStr('');
-    // setRequestHeader({
-    //   searchKey : '', 
-    //   searchStr : ''
-    // });
+    setRequestHeader({
+      searchKey : '', 
+      searchStr : '',
+      activePage: 1,
+      listSize: 0,
+      size: 10
+    });
   }
 
   const handleSearchKeyChange = (e) => {
@@ -196,32 +190,24 @@ function CategoryListModal (properties) {
     }
   }
 
-  const rowClickCancel = function () {
-    //ti, i
-    const stateSetParam = {rowClickCatCd : '', rowClickCatSeq : '', catSeq : ''};
-    stateSet(stateSetParam);
-    inputClear();
-  }
-
   return(
-      <div className='modal category_list_modal'>
-          <div className="modal_child">
-              <div className="header">
-                  <div className="x" onClick={properties.onClose}><img src={icon_x_white}/></div>
-              </div>
-              <div className='search_box_parent'>
-                  <SearchBox searchSelectValue={selectSearchKey} searchTextValue={inputSearchStr} searchTextOnChange={(e)=>{handleSearchStrChange(e)}} searchSelectOnChange={(e)=>{handleSearchKeyChange(e)}} searchTextOnKeyUp={(e)=>{inputSearchStrOnKeyUp(e)}} options = {selectOptions} search={search} reset={onClickSearchResetBtn} placeholder_str='검색옵션 선택 후 검색어를 입력하세요.' />
-              </div>
-              <BoardList type="DtAttach"  placeholder_str='검색옵션 선택 후 검색어를 입력하세요.' thead={selectOptions} tbody={ChildCategoryList} onRowClick={properties.onRowClick}/>
-              <div className='pagenation_box'>
-                  <div className='label'>총 카운트 {reactJsPgListSize}</div>
-                  <div className={reactJsPgShow ? 'pg show' : 'pg hide'}>
-                    <ReactJsPg reactJsPgChange={reactJsPgChange} requestHeader={requestHeader}/>
-                  </div>
-                  {/* <ReactJsPg ref={reactJsPgRef} getList={getChildCategoryList} requestHeader={requestHeader}/> */}
-              </div>
-          </div>
-      </div>
+    <div className='modal category_list_modal'>
+        <div className="modal_child">
+            <div className="header">
+                <div className="x" onClick={properties.onClose}><img src={icon_x_white}/></div>
+            </div>
+            <div className='search_box_parent'>
+                <SearchBox searchSelectValue={selectSearchKey} searchTextValue={inputSearchStr} searchTextOnChange={(e)=>{handleSearchStrChange(e)}} searchSelectOnChange={(e)=>{handleSearchKeyChange(e)}} searchTextOnKeyUp={(e)=>{inputSearchStrOnKeyUp(e)}} options = {selectOptions} search={search} reset={onClickSearchResetBtn} placeholder_str='검색옵션 선택 후 검색어를 입력하세요.' />
+            </div>
+            <BoardList type="DtAttach"  placeholder_str='검색옵션 선택 후 검색어를 입력하세요.' thead={selectOptions} tbody={ChildCategoryList} onRowClick={properties.onRowClick}/>
+            <div className='pagenation_box'>
+                <div className='label'>총 카운트 {totalListSize}</div>
+                <div className={reactJsPgShow ? 'pg show' : 'pg hide'}>
+                  <ReactJsPg reactJsPgChange={reactJsPgChange} requestHeader={requestHeader}/>
+                </div>
+            </div>
+        </div>
+    </div>
   )
 }
 
