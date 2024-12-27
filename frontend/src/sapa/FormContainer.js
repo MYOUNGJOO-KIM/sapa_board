@@ -35,10 +35,10 @@ function FormContainer( properties ) {
     const treeRef = useRef();
 
     const [isTreeOpen, setIsTreeOpen] = useState(true);
+    const [treeMgtYn, setTreeMgtYn] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isMgtVisible, setIsMgtVisible] = useState(false);
     const [formDisabled, setFormDisabled] = useState(true);
-    const [treeMgtYn, setTreeMgtYn] = useState('');
     
     const [selectedKeys, setSelectedKeys] = useState([]);
     const [selectedInfo, setSelectedInfo] = useState(null);
@@ -313,16 +313,6 @@ function FormContainer( properties ) {
             setInputCatNm(category.catNm);
             requestBody.catNm = category.catNm;
         }
-        // setSelectedKeys([selectedObj.catCd]);
-        // setSelectedInfo(info);
-        //setInputCatNm(selectedObj.catNm);
-        //setCatCd(selectedObj.catCd);
-        //setCatSeq(selectedObj.catSeq);
-        //requestBody.catSeq = selectedObj.catSeq;
-        //requestBody.catCd = selectedObj.catCd;
-        //requestBody.catNm = selectedObj.catNm;
-        // setFormDisabled(false);
-        // getPrfData();
     }
 
     const searchReset = function(e){
@@ -337,14 +327,6 @@ function FormContainer( properties ) {
         if(selectedKeys.length > 0){
             stateSet({catSeq : info.node.catSeq, catCd : info.node.key}, info);
             inputSet({catNm : info.node.title});
-            // setSelectedKeys(selectedKeys);
-            // setSelectedInfo(info);
-            // setInputCatNm(info.node.title);
-            // setCatCd(selectedKeys[0]);
-            // setCatSeq(info.node.catSeq);
-            // requestBody.catSeq = info.node.catSeq;
-            // requestBody.catCd = selectedKeys[0];
-            // requestBody.catNm = info.node.catNm;
             setFormDisabled(false);
             getPrfData();
         } 
