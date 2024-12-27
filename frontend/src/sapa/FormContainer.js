@@ -1,3 +1,16 @@
+// FormContainer.js
+//
+// VIEW: /form, 증빙자료 관리
+// TODO: 
+// FIXME: 유효성 변경 시 필요에 맞게 dataRegex(serviceRegex) 수정 필요.
+// HACK: 
+// NOTE: 1차 작성은 insert 기능. 2차 작성 시 update, delete 기능 추가 필요.
+// REFACTOR: 비동기 함수를 실행할 때 iParam, uParam 등을 사용하는 로직이므로, 이후 리팩토링 필요 
+// IMPORTANT: 
+// INDT: 2024.12.27
+// INID: MJK
+
+
 import React, {useEffect, useState, useRef } from 'react'; 
 import axios from 'axios';
 import { format } from "date-fns";
@@ -59,6 +72,43 @@ function FormContainer( properties ) {
     const [selectSearchKey, setSelectSearchKey] = useState('');
     const [inputSearchStr, setInputSearchStr] = useState('');
 
+    const [isRowClicked, setIsRowClicked] = useState(false);
+
+    const [requestHeader, setRequestHeader] = useState({
+        searchKey : selectSearchKey
+        , searchStr : inputSearchStr
+        , fileList : fileList
+    });
+
+    const [requestBody, setRequestBody] = useState({
+        catSeq : catSeq
+        , catNm : inputCatNm
+        , catCd : catCd
+        /* 수정 로직 추가 시, prfSeq : inputPrfSeq */
+        , prfNm : inputPrfNm
+        , prfDesc : inputPrfDesc
+        , inId : userId
+        , chgId : userId
+    });
+
+    // const requestHeader = {
+    //     searchKey : selectSearchKey
+    //     , searchStr : inputSearchStr
+    //     , fileList : fileList
+    // };
+    
+    // const requestBody = {
+    //     catSeq : catSeq
+    //     , catNm : inputCatNm
+    //     , catCd : catCd
+    //     /* 수정 로직 추가 시, prfSeq : inputPrfSeq */
+    //     , prfNm : inputPrfNm
+    //     , prfDesc : inputPrfDesc
+    //     , inId : userId
+    //     , chgId : userId
+    //     //, fileList : fileList
+    //     //, mgtList : mgtList
+    // };
 
 
     const getCategoryListTreeList = async () => {
@@ -90,26 +140,9 @@ function FormContainer( properties ) {
         }
     },[]);
 
-    if (!isTreeOpen) return null;
+    //if (!isTreeOpen) return null;
 
-    const requestHeader = {
-        searchKey : selectSearchKey
-        , searchStr : inputSearchStr
-        , fileList : fileList
-    };
     
-    const requestBody = {
-        catSeq : catSeq
-        , catNm : inputCatNm
-        , catCd : catCd
-        /* 수정 로직 추가 시, prfSeq : inputPrfSeq */
-        , prfNm : inputPrfNm
-        , prfDesc : inputPrfDesc
-        , inId : userId
-        , chgId : userId
-        //, fileList : fileList
-        //, mgtList : mgtList
-    };
     
     const selectOptions = [
         {key:'', value:'검색옵션 선택'}
@@ -266,15 +299,7 @@ function FormContainer( properties ) {
         setIsModalOpen(false);
     };
 
-    const stateClear = function(){
-        setPrfData('');
-        setSelectedKeys([]);
-        setSelectedInfo(null);
-        setCatSeq('');
-        setCatCd('');
-        requestBody.catSeq = '';
-        requestBody.catCd = '';
-    }
+    
 
     const inputClear = function(){
         setInputCatNm('');
@@ -286,26 +311,38 @@ function FormContainer( properties ) {
         setDynamicInputVal({});
         setDynamicInputValStr({});
         //requestBody.prfSeq = '';
-        requestBody.catNm = '';
-        requestBody.prfNm = '';
-        requestBody.prfDesc = '';
-        requestHeader.fileList = [];
+        // requestBody.catNm = '';
+        // requestBody.prfNm = '';
+        // requestBody.prfDesc = '';
+        // requestHeader.fileList = [];
+        // set
         //requestBody.mgtList = [];
     }
 
-    const stateSet = function (selectedObj, selectedInfo){
+    const stateClear = function(){
+        setPrfData('');
+        setSelectedKeys([]);
+        setSelectedInfo(null);
+        setCatSeq('');
+        setCatCd('');
+        requestBody.catSeq = '';
+        requestBody.catCd = '';
+    }
+
+    const stateSet = function (selectedObj){
         if (selectedObj.catCd || selectedObj.catCd == '') {
             setSelectedKeys([selectedObj.catCd]);
             setCatCd(selectedObj.catCd);
-            requestBody.catCd = selectedObj.catCd;
+            //requestBody.catCd = selectedObj.catCd;
         }
-        if (selectedInfo) {
-            setSelectedInfo(selectedInfo);
+        if (selectedObj) {
+            setSelectedInfo(selectedObj);
         }
         if (selectedObj.catSeq || selectedObj.catSeq == '') {
             setCatSeq(selectedObj.catSeq);
-            requestBody.catSeq = selectedObj.catSeq;
+            //requestBody.catSeq = selectedObj.catSeq;
         }
+        return true;
     }
 
     const inputSet = function (category){
@@ -313,6 +350,7 @@ function FormContainer( properties ) {
             setInputCatNm(category.catNm);
             requestBody.catNm = category.catNm;
         }
+        return true;
     }
 
     const searchReset = function(e){
@@ -332,17 +370,34 @@ function FormContainer( properties ) {
         } 
     };
 
-    function onRowClick(selectedObj, info) {
+    function onRowClick(selectedObj) {
+        const requestHeaderParam = {
+            ...selectedObj
+        };
         onCancelClick();
-        stateSet(selectedObj, info);
+        stateSet(selectedObj);
         inputSet(selectedObj);
+        // setIsRowClicked(stateSet(selectedObj));
+        // setIsRowClicked(inputSet(selectedObj));
+        //inputSet(selectedObj);
+        
         setFormDisabled(false);
-        getPrfData();
-        if(selectedKeys.length > 0){
-        }
+
+        //setIsRowClicked(true);
+        //getPrfData();
+        // if(selectedKeys.length > 0){
+        // }
           
         return handleCloseModal();
     }
+    
+
+    // useEffect(() => {
+    //     if(isRowClicked){
+    //         getPrfData();
+    //         setIsRowClicked(false);
+    //     }
+    // },[isRowClicked])
 
     const onCancelClick = function () {
         setIsMgtVisible(false);
